@@ -11,15 +11,20 @@ public class WinScreen implements Screen {
     private final SpriteBatch batch;
     private final Texture winScreenImage;
 
-    public WinScreen(Main game) {
+    public WinScreen(Main game, String levelImagePath) {
         this.game = game;
         this.batch = game.batch;
-        this.winScreenImage = new Texture("winscreen.png");
+
+        // Check if the texture exists
+        if (!Gdx.files.internal("winscreen.jpg").exists()) {
+            Gdx.app.error("WinScreen", "winscreen.jpg does not exist in the assets folder!");
+        }
+
+        this.winScreenImage = new Texture("winscreen.jpg");
     }
 
     @Override
     public void show() {
-        // Play background music or any win sound if needed
         if (!game.musicMuted && !game.backgroundMusic.isPlaying()) {
             game.backgroundMusic.play();
         }
@@ -27,37 +32,28 @@ public class WinScreen implements Screen {
 
     @Override
     public void render(float delta) {
-        // Clear the screen
         Gdx.gl.glClearColor(1, 1, 1, 1);
         Gdx.gl.glClear(Gdx.gl.GL_COLOR_BUFFER_BIT);
 
-        // Draw the win screen image
         batch.begin();
         batch.draw(winScreenImage, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         batch.end();
     }
 
     @Override
-    public void resize(int width, int height) {
-        // Adjust if necessary
-    }
+    public void resize(int width, int height) {}
 
     @Override
-    public void pause() {
-    }
+    public void pause() {}
 
     @Override
-    public void resume() {
-    }
+    public void resume() {}
 
     @Override
-    public void hide() {
-        // Called when screen is hidden
-    }
+    public void hide() {}
 
     @Override
     public void dispose() {
-        // Dispose resources
         winScreenImage.dispose();
     }
 }
