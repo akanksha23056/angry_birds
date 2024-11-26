@@ -197,14 +197,33 @@ public class Level1GameScreen implements Screen {
 
             // Draw all objects
             batch.begin();
-            batch.draw(levelImage, 0, 0, 16, 9);
-            batch.draw(birdTexture, birdBody.getPosition().x - 0.3f, birdBody.getPosition().y - 0.3f, 0.6f, 0.6f);
+            batch.draw(levelImage, 0, 0, 16, 9); // Draw the background
+
+            // Draw the bird
+            Vector2 birdPosition = birdBody.getPosition();
+            batch.draw(birdTexture, birdPosition.x - 0.3f, birdPosition.y - 0.3f, 0.6f, 0.6f);
+
+            // Draw pigs
+            for (Body pig : pigs) {
+                Vector2 pigPosition = pig.getPosition();
+                batch.draw(pigTexture, pigPosition.x - 0.3f, pigPosition.y - 0.3f, 0.6f, 0.6f);
+            }
+
+            // Draw crates
+            for (Body crate : crates) {
+                Vector2 cratePosition = crate.getPosition();
+                batch.draw(crateTexture, cratePosition.x - 0.4f, cratePosition.y - 0.4f, 0.8f, 0.8f);
+            }
+
+            // Draw pause button
+            drawPauseButton();
+
             batch.end();
 
             // Render Box2D Debug Information
             debugRenderer.render(world, camera.combined);
 
-            // Handle mouse dragging
+            // Handle mouse dragging for bird
             if (Gdx.input.isTouched()) {
                 Vector3 target3 = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
                 camera.unproject(target3);
@@ -219,15 +238,26 @@ public class Level1GameScreen implements Screen {
                 world.destroyJoint(mouseJoint);
                 mouseJoint = null;
             }
+
+            // Check boundaries for bird
+            if (birdPosition.x < 0 || birdPosition.x > 16 || birdPosition.y < 0 || birdPosition.y > 9) {
+                resetBird();
+            }
         } catch (Exception e) {
             Gdx.app.error("Level1GameScreen", "Error in render(): " + e.getMessage(), e);
         }
     }
 
 
+    private void resetBird() {
+        birdBody.setTransform(2, 1, 0); // Reset to initial position
+        birdBody.setLinearVelocity(0, 0); // Stop movement
+        birdBody.setAngularVelocity(0); // Stop rotation
+    }
+
+
     private void drawPauseButton() {
         boolean isHovered = pauseButtonBounds.contains(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
-        batch.begin();
         if (isHovered) {
             batch.draw(pauseButtonHoverTexture, pauseButtonBounds.x - 5.0F, pauseButtonBounds.y - 5.0F,
                 pauseButtonBounds.width + 10.0F, pauseButtonBounds.height + 10.0F);
@@ -239,8 +269,8 @@ public class Level1GameScreen implements Screen {
             batch.draw(pauseButtonTexture, pauseButtonBounds.x, pauseButtonBounds.y,
                 pauseButtonBounds.width, pauseButtonBounds.height);
         }
-        batch.end();
     }
+
 
     @Override
     public void dispose() {
