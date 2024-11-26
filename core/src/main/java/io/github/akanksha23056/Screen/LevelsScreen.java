@@ -70,7 +70,16 @@ public class LevelsScreen implements Screen {
         batch.draw(levelsImage, 0.0F, 0.0F, (float) Gdx.graphics.getWidth(), (float) Gdx.graphics.getHeight());
 
         // Handle level buttons
-        handleButton(level1Texture, level1HoverTexture, level1Bounds, "levelgame.jpg");
+//        handleButton(level1Texture, level1HoverTexture, level1Bounds, "levelgame.jpg");
+        if (level1Bounds.contains((float) Gdx.input.getX(), (float) (Gdx.graphics.getHeight() - Gdx.input.getY()))) {
+            batch.draw(level1HoverTexture, level1Bounds.x - 5.0F, level1Bounds.y - 5.0F, level1Bounds.width + 10.0F, level1Bounds.height + 10.0F);
+            if (Gdx.input.isButtonJustPressed(0)) {
+                Gdx.app.postRunnable(() -> game.setScreen(new Level1GameScreen(game, "level1game.jpg")));
+            }
+        } else {
+            batch.draw(level1Texture, level1Bounds.x, level1Bounds.y, level1Bounds.width, level1Bounds.height);
+        }
+
 //        handleButton(level2Texture, level2HoverTexture, level2Bounds, "levelgame.jpg");
         //handles level 2 button
         if (level2Bounds.contains((float) Gdx.input.getX(), (float) (Gdx.graphics.getHeight() - Gdx.input.getY()))) {
@@ -107,7 +116,7 @@ public class LevelsScreen implements Screen {
         if (bounds.contains((float) Gdx.input.getX(), (float) (Gdx.graphics.getHeight() - Gdx.input.getY()))) {
             batch.draw(hoverTexture, bounds.x - 5.0F, bounds.y - 5.0F, bounds.width + 10.0F, bounds.height + 10.0F);
             if (Gdx.input.isButtonJustPressed(0)) {
-                Gdx.app.postRunnable(() -> game.setScreen(new LevelGameScreen(game, levelGameImagePath)));
+                Gdx.app.postRunnable(() -> game.setScreen(new Level1GameScreen(game, levelGameImagePath)));
             }
         } else {
             batch.draw(normalTexture, bounds.x, bounds.y, bounds.width, bounds.height);
