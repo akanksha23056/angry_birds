@@ -71,7 +71,17 @@ public class LevelsScreen implements Screen {
 
         // Handle level buttons
         handleButton(level1Texture, level1HoverTexture, level1Bounds, "levelgame.jpg");
-        handleButton(level2Texture, level2HoverTexture, level2Bounds, "levelgame.jpg");
+//        handleButton(level2Texture, level2HoverTexture, level2Bounds, "levelgame.jpg");
+        //handles level 2 button
+        if (level2Bounds.contains((float) Gdx.input.getX(), (float) (Gdx.graphics.getHeight() - Gdx.input.getY()))) {
+            batch.draw(level2HoverTexture, level2Bounds.x - 5.0F, level2Bounds.y - 5.0F, level2Bounds.width + 10.0F, level2Bounds.height + 10.0F);
+            if (Gdx.input.isButtonJustPressed(0)) {
+                Gdx.app.postRunnable(() -> game.setScreen(new Level2GameScreen(game, "level2game.jpg")));
+            }
+        } else {
+            batch.draw(level2Texture, level2Bounds.x, level2Bounds.y, level2Bounds.width, level2Bounds.height);
+        }
+
         handleButton(level3Texture, level3HoverTexture, level3Bounds, "levelgame.jpg");
 
         // Handle back button
