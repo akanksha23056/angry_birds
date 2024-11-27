@@ -25,17 +25,21 @@ public class Level1GameScreen implements Screen {
 
     private final Stage stage;
     private final Catapult catapult;
-    private final Array<Bird> birds; // Array to manage multiple birds
+    private final Array<Bird> birds;
 
-    private Bird currentBird; // Bird currently on the catapult
-    private boolean isBirdLaunched; // Tracks if the current bird is launched
+    private Bird currentBird;
+    private boolean isBirdLaunched;
 
     private World world;
     private Box2DDebugRenderer debugRenderer;
 
-    private boolean isPaused; // Tracks if the game is paused
+    private boolean isPaused;
 
-    private Body currentBirdBody; // Box2D body for the current bird
+    private Body currentBirdBody;
+
+    private Vector2 dragStart = new Vector2();
+    private Vector2 dragEnd = new Vector2();
+    private boolean isDragging = false;
 
     public Level1GameScreen(Main game, String levelImagePath) {
         this.game = game;
@@ -45,9 +49,8 @@ public class Level1GameScreen implements Screen {
         this.pauseButtonHoverTexture = new Texture("pause_hover.png");
         this.pauseButtonBounds = new Rectangle(10, Gdx.graphics.getHeight() - 120, 100, 100);
 
-
         // Initialize Box2D World
-        world = new World(new Vector2(0, -9.8f), true); // Gravity points downward
+        world = new World(new Vector2(0, -9.8f), true);
         debugRenderer = new Box2DDebugRenderer();
 
         // Initialize Stage
@@ -67,14 +70,14 @@ public class Level1GameScreen implements Screen {
             setCurrentBird(birds.first());
         }
 
-        this.isPaused = false; // Initialize pause state as not paused
+        this.isPaused = false;
     }
 
     private void initializeBirds() {
-        float birdStartX = 50; // Starting X position for extra birds
-        float birdStartY = 100; // Y position (below the catapult)
+        float birdStartX = 50;
+        float birdStartY = 100;
 
-        // Create three birds as an example
+        // Create three birds
         for (int i = 0; i < 3; i++) {
             Bird bird = new Bird(world, "redbird.png", birdStartX + i * 50, birdStartY);
             birds.add(bird);
@@ -84,15 +87,13 @@ public class Level1GameScreen implements Screen {
 
     private void setCurrentBird(Bird bird) {
         currentBird = bird;
-        currentBird.setPosition(catapult.getX() + 20, catapult.getY() + 50); // Adjust bird position on catapult
+        currentBird.setPosition(catapult.getX() + 20, catapult.getY() + 50);
         isBirdLaunched = false;
 
-        // Remove any previous Box2D body if present
         if (currentBirdBody != null) {
             world.destroyBody(currentBirdBody);
         }
 
-        // Initialize Box2D physics for the current bird
         BodyDef birdBodyDef = new BodyDef();
         birdBodyDef.type = BodyDef.BodyType.DynamicBody;
         birdBodyDef.position.set(currentBird.getX(), currentBird.getY());
@@ -103,15 +104,15 @@ public class Level1GameScreen implements Screen {
         FixtureDef birdFixtureDef = new FixtureDef();
         birdFixtureDef.shape = birdShape;
         birdFixtureDef.density = 1.0f;
-        birdFixtureDef.restitution = 0.5f; // Bounciness
-        birdFixtureDef.friction = 0.3f; // Friction
+        birdFixtureDef.restitution = 0.5f;
+        birdFixtureDef.friction = 0.3f;
 
         currentBirdBody = world.createBody(birdBodyDef);
         currentBirdBody.createFixture(birdFixtureDef);
 
-        birdShape.dispose(); // Clean up shape after use
+        birdShape.dispose();
 
-        currentBird.reset(); // Reset bird physics and state
+        currentBird.reset();
     }
 
     @Override
@@ -123,42 +124,40 @@ public class Level1GameScreen implements Screen {
 
     @Override
     public void render(float delta) {
-        // Clear the screen
         ScreenUtils.clear(0.15F, 0.15F, 0.2F, 1.0F);
 
-        // Update physics simulation
         world.step(1 / 60f, 6, 2);
 
-        // Render the game background and UI
         batch.begin();
         batch.draw(levelImage, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-
-        // Draw the pause button at the end to ensure it is on top
         drawPauseButton();
-
         batch.end();
 
-        // Draw Box2D debug shapes (optional, for visualization)
         debugRenderer.render(world, stage.getCamera().combined);
 
-        // Render stage (actors, including birds and catapult)
         stage.act(delta);
         stage.draw();
 
-        // Handle Bird Launching Logic
-        handleBirdLaunch();
+        handleBirdDragAndLaunch();
     }
 
-    private void handleBirdLaunch() {
+    private void handleBirdDragAndLaunch() {
         if (currentBird != null && !isBirdLaunched) {
-            if (Gdx.input.isButtonJustPressed(0)) { // Left mouse button press to simulate launch
-                Vector2 launchVelocity = new Vector2(10, 10); // Example launch velocity
-                launchBird(launchVelocity); // Launch the bird
+            if (Gdx.input.isTouched()) {
+                if (!isDragging) {
+                    dragStart.set(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
+                    isDragging = true;
+                } else {
+                    dragEnd.set(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
+                }
+            } else if (isDragging) {
+                Vector2 launchVector = dragStart.sub(dragEnd).scl(0.5f);
+                launchBird(launchVector);
                 isBirdLaunched = true;
+                isDragging = false;
 
-                // Move to next bird if available
                 Gdx.app.postRunnable(() -> {
-                    birds.removeValue(currentBird, true); // Remove launched bird
+                    birds.removeValue(currentBird, true);
                     if (birds.size > 0) {
                         setCurrentBird(birds.first());
                     }
@@ -169,20 +168,19 @@ public class Level1GameScreen implements Screen {
 
     private void launchBird(Vector2 velocity) {
         if (currentBirdBody != null) {
-            currentBirdBody.setLinearVelocity(velocity); // Set the velocity for the bird's movement
+            currentBirdBody.setLinearVelocity(velocity);
         }
     }
 
     private void drawPauseButton() {
         boolean isHovered = pauseButtonBounds.contains(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
 
-        // Draw the pause button with hover effect
         if (isHovered) {
             batch.draw(pauseButtonHoverTexture, pauseButtonBounds.x - 5.0F, pauseButtonBounds.y - 5.0F,
                 pauseButtonBounds.width + 10.0F, pauseButtonBounds.height + 10.0F);
-            if (Gdx.input.isButtonJustPressed(0)) { // Check for left mouse button press
-                game.playButtonClickSound(); // Play button click sound
-                pauseGame(); // Pause the game and go to PauseScreen
+            if (Gdx.input.isButtonJustPressed(0)) {
+                game.playButtonClickSound();
+                pauseGame();
             }
         } else {
             batch.draw(pauseButtonTexture, pauseButtonBounds.x, pauseButtonBounds.y,
@@ -191,8 +189,8 @@ public class Level1GameScreen implements Screen {
     }
 
     private void pauseGame() {
-        isPaused = true; // Set the game to paused state
-        game.setScreen(new PauseScreen(game)); // Transition to PauseScreen
+        isPaused = true;
+        game.setScreen(new PauseScreen(game));
     }
 
     @Override
@@ -209,7 +207,6 @@ public class Level1GameScreen implements Screen {
         catapult.dispose();
     }
 
-    // Empty lifecycle methods
     @Override
     public void resize(int width, int height) {}
     @Override
