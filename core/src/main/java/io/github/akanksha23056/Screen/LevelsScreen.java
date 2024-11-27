@@ -22,8 +22,7 @@ public class LevelsScreen implements Screen {
     private final Texture backButtonTexture;
     private final Texture backButtonHoverTexture;
 
-    // Bird instance
-    private final Bird bird;
+
 
     private final Rectangle level1Bounds;
     private final Rectangle level2Bounds;
@@ -53,9 +52,6 @@ public class LevelsScreen implements Screen {
         this.level3Bounds = new Rectangle(this.level1Bounds.x + buttonWidth / 2.0F + 30.0F,
             this.level1Bounds.y - buttonHeight - 30.0F, buttonWidth, buttonHeight);
         this.backButtonBounds = new Rectangle(10.0F, (float) (Gdx.graphics.getHeight() - 10 - 100), 100.0F, 100.0F);
-
-        // Initialize Bird with its position
-        this.bird = new Bird("red.png", "red_hover.png", 0, 0);
     }
 
     public void show() {
@@ -105,9 +101,7 @@ public class LevelsScreen implements Screen {
         // Handle back button
         handleBackButton();
 
-        // Draw and update the bird
-        bird.draw(batch, 1);
-        bird.act(delta);
+
 
         batch.end();
     }
@@ -152,6 +146,5 @@ public class LevelsScreen implements Screen {
         level3HoverTexture.dispose();
         backButtonTexture.dispose();
         backButtonHoverTexture.dispose();
-        bird.dispose(); // Dispose of bird resources
     }
 }

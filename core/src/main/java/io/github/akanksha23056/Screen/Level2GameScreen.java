@@ -9,11 +9,10 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Rectangle;
-import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.box2d.*;
-import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
 import com.badlogic.gdx.physics.box2d.joints.MouseJoint;
 import com.badlogic.gdx.physics.box2d.joints.MouseJointDef;
+import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.utils.ScreenUtils;
 import io.github.akanksha23056.Main;
 
@@ -32,7 +31,6 @@ public class Level2GameScreen implements Screen {
     private Texture pigTexture;
     private Texture crateTexture;
 
-    // Add this to your class variables
     private Vector2 slingshotPosition;
     private float slingRadius = 1.5f; // Maximum drag distance for the bird
     private boolean isDragging = false;
@@ -47,28 +45,26 @@ public class Level2GameScreen implements Screen {
     private final ArrayList<Body> pigs = new ArrayList<>();
     private final ArrayList<Body> crates = new ArrayList<>();
 
+    private boolean isPaused = false; // Tracks if the game is paused
+
     public Level2GameScreen(Main game, String levelImagePath) {
         this.game = game;
         this.batch = game.batch;
 
         // Load textures
-        this.levelImage = new Texture(Gdx.files.internal(levelImagePath));
-//        this.slingshotTexture = new Texture("sling.png");
-//        this.birdTexture = new Texture("redbird.png");
+        this.levelImage = new Texture(Gdx.files.internal("level2game.jpg"));
         this.slingshotTexture = new Texture(Gdx.files.internal("sling.png"));
         this.birdTexture = new Texture(Gdx.files.internal("redbird.png"));
-        this.pigTexture = new Texture("pig.png");
-        this.crateTexture = new Texture("crate.png");
+        this.pigTexture = new Texture(Gdx.files.internal("pig.png"));
+        this.crateTexture = new Texture(Gdx.files.internal("crate.png"));
 
         this.slingshotPosition = new Vector2(3.5f, 2.4f);
-
 
         // Load pause button textures
         this.pauseButtonTexture = new Texture("pause.png");
         this.pauseButtonHoverTexture = new Texture("pause_hover.png");
 
-        this.pauseButtonBounds = new Rectangle(10.0F, Gdx.graphics.getHeight() - 110.0F, 100.0F, 100.0F);
-
+        this.pauseButtonBounds = new Rectangle(10, Gdx.graphics.getHeight() - 120, 100, 100);
 
         // Initialize Box2D world and renderer
         world = new World(new Vector2(0, -9.8f), true); // Gravity
@@ -163,179 +159,92 @@ public class Level2GameScreen implements Screen {
         }
     }
 
-
-    private void renderSlingshot() {
-        batch.draw(slingshotTexture, slingshotPosition.x - 0.5f, slingshotPosition.y - 0.6f, 1f, 2f); // Centered and scaled
-    }
-
-    private void createMouseJoint(Vector2 target) {
-        if (groundBody == null || birdBody == null) {
-            Gdx.app.error("Level2GameScreen", "Ground or bird body is null!");
-            return; // Prevent the crash
-        }
-
-        if (mouseJoint != null) {
-            world.destroyJoint(mouseJoint); // Destroy existing joint
-        }
-
-        MouseJointDef jointDef = new MouseJointDef();
-        jointDef.bodyA = groundBody; // Static ground body
-        jointDef.bodyB = birdBody; // Bird body
-        jointDef.collideConnected = true;
-        jointDef.maxForce = 1000.0f * birdBody.getMass();
-        jointDef.target.set(target); // Set target
-
-        mouseJoint = (MouseJoint) world.createJoint(jointDef);
-    }
-
-
-
     @Override
     public void show() {
-        // Called when this screen becomes the current screen for the game.
         if (!game.musicMuted && !game.backgroundMusic.isPlaying()) {
             game.backgroundMusic.play();
         }
     }
 
-
     @Override
     public void render(float delta) {
-        try {
-            ScreenUtils.clear(0.2f, 0.2f, 0.2f, 1.0f);
+        // Clear the screen
+        ScreenUtils.clear(0.2f, 0.2f, 0.2f, 1.0f);
 
-            // Update physics world
-            world.step(1 / 60f, 6, 2);
+        // Render the background and pause button
+        batch.begin();
+        batch.draw(levelImage, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-            // Update camera
-            camera.update();
-            batch.setProjectionMatrix(camera.combined);
+        // Draw and draw the pause button at the end to ensure it is on top
+        drawPauseButton();
 
-            // Draw all objects
-            batch.begin();
-            batch.draw(levelImage, 0, 0, 16, 9); // Draw the background
-
-            // Draw the bird
-            Vector2 birdPosition = birdBody.getPosition();
-            batch.draw(birdTexture, birdPosition.x - 0.4f, birdPosition.y - 0.4f, 0.8f, 0.8f);
-
-            renderSlingshot();
-
-            // Draw pigs
-            for (Body pig : pigs) {
-                Vector2 pigPosition = pig.getPosition();
-                batch.draw(pigTexture, pigPosition.x - 0.4f, pigPosition.y - 0.4f, 0.8f, 0.8f);
-            }
-
-            // Draw crates
-            for (Body crate : crates) {
-                Vector2 cratePosition = crate.getPosition();
-                batch.draw(crateTexture, cratePosition.x - 0.4f, cratePosition.y - 0.4f, 0.8f, 0.8f);
-            }
-
-            // Draw pause button
-            drawPauseButton();
-
-            batch.end();
+        batch.end();
 
 
-            ShapeRenderer shapeRenderer = new ShapeRenderer();
-            shapeRenderer.setProjectionMatrix(batch.getProjectionMatrix());
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-            shapeRenderer.setColor(1, 0, 0, 1); // Red outline for debug
-            shapeRenderer.rect(pauseButtonBounds.x, pauseButtonBounds.y,
-                pauseButtonBounds.width, pauseButtonBounds.height);
-            shapeRenderer.end();
+        // Update the physics world
+        world.step(1 / 60f, 6, 2);
+        camera.update();
+        batch.setProjectionMatrix(camera.combined);
+
+        // Render game elements
+        batch.begin();
 
 
-            // Render Box2D Debug Information
-            debugRenderer.render(world, camera.combined);
+        // Draw the bird
+        Vector2 birdPosition = birdBody.getPosition();
+        batch.draw(birdTexture, birdPosition.x - 0.4f, birdPosition.y - 0.4f, 0.8f, 0.8f);
 
-            // Handle mouse dragging for bird
-            if (Gdx.input.isTouched()) {
-                Vector3 target3 = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
-                camera.unproject(target3);
-                Vector2 target2 = new Vector2(target3.x, target3.y);
+        // Draw pigs
+        for (Body pig : pigs) {
+            Vector2 pigPosition = pig.getPosition();
+            batch.draw(pigTexture, pigPosition.x - 0.4f, pigPosition.y - 0.4f, 0.8f, 0.8f);
+        }
 
-                if (mouseJoint == null) {
-                    createMouseJoint(target2);
-                } else {
-                    mouseJoint.setTarget(target2);
-                }
-            } else if (mouseJoint != null) {
-                world.destroyJoint(mouseJoint);
-                mouseJoint = null;
-            }
+        // Draw crates
+        for (Body crate : crates) {
+            Vector2 cratePosition = crate.getPosition();
+            batch.draw(crateTexture, cratePosition.x - 0.4f, cratePosition.y - 0.4f, 0.8f, 0.8f);
+        }
 
-            // Check boundaries for bird
-            if (birdPosition.x < 0 || birdPosition.x > 16 || birdPosition.y < 0 || birdPosition.y > 9) {
-                resetBird();
-            }
-        } catch (Exception e) {
-            Gdx.app.error("Level2GameScreen", "Error in render(): " + e.getMessage(), e);
+        batch.end();
+
+        // Render Box2D debug information
+        debugRenderer.render(world, camera.combined);
+
+        // Reset bird if it goes out of bounds
+        if (birdPosition.x < 0 || birdPosition.x > 16 || birdPosition.y < 0 || birdPosition.y > 9) {
+            resetBird();
         }
     }
-
-
     private void resetBird() {
-        birdBody.setTransform(2, 1, 0); // Reset to initial position
-        birdBody.setLinearVelocity(0, 0); // Stop movement
-        birdBody.setAngularVelocity(0); // Stop rotation
-    }
+        // Reset the bird's position to its starting location
+        birdBody.setTransform(2, 2.2f, 0); // Replace (2, 2.2f) with your slingshot's default position if needed
 
-    private void handleSlingAction() {
-        Vector2 birdPosition = birdBody.getPosition(); // Current position of the bird
-
-        if (Gdx.input.isTouched()) {
-            Vector3 touchPosition = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
-            camera.unproject(touchPosition);
-
-            Vector2 touchVector = new Vector2(touchPosition.x, touchPosition.y);
-
-            // Check if dragging should occur
-            if (isDragging || touchVector.dst(slingshotPosition) <= slingRadius) {
-                isDragging = true;
-
-                // Constrain bird to within the sling radius
-                if (touchVector.dst(slingshotPosition) > slingRadius) {
-                    Vector2 direction = touchVector.sub(slingshotPosition).nor();
-                    birdBody.setTransform(slingshotPosition.cpy().add(direction.scl(slingRadius)), 0);
-                } else {
-                    birdBody.setTransform(touchVector, 0);
-                }
-            }
-        } else if (isDragging) {
-            // Release the bird
-            isDragging = false;
-
-            // Calculate launch direction and apply impulse
-            Vector2 launchDirection = slingshotPosition.cpy().sub(birdPosition); // From bird to slingshot center
-            float force = launchDirection.len() * 15; // Scale force (adjust multiplier as needed)
-            birdBody.setLinearVelocity(0, 0); // Reset any existing velocity
-            birdBody.applyLinearImpulse(launchDirection.nor().scl(force), birdBody.getWorldCenter(), true);
-        }
+        // Reset the bird's velocity and rotation
+        birdBody.setLinearVelocity(0, 0);
+        birdBody.setAngularVelocity(0);
+        birdBody.setAwake(true); // Ensure the bird is active in the physics world
     }
 
 
 
     private void drawPauseButton() {
-        // Debug: Check if textures are loaded
-        if (pauseButtonTexture == null || pauseButtonHoverTexture == null) {
-            Gdx.app.error("Level2GameScreen", "Pause button textures are not loaded!");
-            return; // Avoid crashing if textures are null
-        }
-
-        // Check if the mouse is hovering over the button
         boolean isHovered = pauseButtonBounds.contains(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
-
-        // Draw the pause button
         if (isHovered) {
-            batch.draw(pauseButtonHoverTexture, pauseButtonBounds.x - 5.0F, pauseButtonBounds.y - 5.0F,
-                pauseButtonBounds.width + 10.0F, pauseButtonBounds.height + 10.0F);
+            batch.draw(pauseButtonHoverTexture, pauseButtonBounds.x - 5, pauseButtonBounds.y - 5,
+                pauseButtonBounds.width + 10, pauseButtonBounds.height + 10);
+            if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
+                pauseGame();
+            }
         } else {
             batch.draw(pauseButtonTexture, pauseButtonBounds.x, pauseButtonBounds.y,
                 pauseButtonBounds.width, pauseButtonBounds.height);
         }
+    }
+
+    private void pauseGame() {
+        isPaused = true;
+        game.setScreen(new PauseScreen(game));
     }
 
     @Override
@@ -345,22 +254,18 @@ public class Level2GameScreen implements Screen {
         birdTexture.dispose();
         pigTexture.dispose();
         crateTexture.dispose();
-        pauseButtonTexture.dispose();  // Dispose of pause texture
-        pauseButtonHoverTexture.dispose();  // Dispose of pause hover texture
+        pauseButtonTexture.dispose();
+        pauseButtonHoverTexture.dispose();
         debugRenderer.dispose();
         world.dispose();
     }
 
-
     @Override
     public void resize(int width, int height) {}
-
     @Override
     public void pause() {}
-
     @Override
     public void resume() {}
-
     @Override
-    public void hide(){}
+    public void hide() {}
 }
