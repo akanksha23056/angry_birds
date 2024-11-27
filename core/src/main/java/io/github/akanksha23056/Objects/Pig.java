@@ -3,75 +3,79 @@ package io.github.akanksha23056.Objects;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
-import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.math.Vector2;
-
-import java.util.ArrayList;
-import java.util.List;
+import com.badlogic.gdx.physics.box2d.*;
+import com.badlogic.gdx.scenes.scene2d.Actor;
 
 public class Pig extends Actor {
     private final Texture pigTexture;
-    private final List<Vector2> pigPositions;
-    private final List<Vector2> pigVelocities;
-    private float elapsedTime = 0;
+    private final Vector2 position;
+    private final World world;
+    private Body pigBody;
+    private final float width = 50;  // Default pig width
+    private final float height = 50; // Default pig height
 
-    public Pig() {
-        this.pigTexture = new Texture("pig.png");
-        this.pigPositions = new ArrayList<>();
-        this.pigVelocities = new ArrayList<>();
+    public Pig(World world, String texturePath, float x, float y) {
+        this.world = world;
+        this.pigTexture = new Texture(texturePath);
+        this.position = new Vector2(x, y);
 
-        // Initialize 20 pigs with random positions and velocities
-        for (int i = 0; i < 20; i++) {
-            float x = (float) Math.random() * Gdx.graphics.getWidth();
-            float y = (float) Math.random() * Gdx.graphics.getHeight();
+        // Create the Box2D body
+        createPigBody(x, y);
+    }
 
-            pigPositions.add(new Vector2(x, y));
+    private void createPigBody(float x, float y) {
+        // Define the shape of the pig (a simple rectangle)
+        PolygonShape pigShape = new PolygonShape();
+        pigShape.setAsBox(width / 2, height / 2); // Half-width and half-height for the box shape
 
-            // Set higher random velocities for each pig to simulate faster movement
-            float velocityX = (float) Math.random() * 200 - 100; // Speed from -100 to 100 pixels/second
-            float velocityY = -150; // Constant downward velocity for the rain effect
-            pigVelocities.add(new Vector2(velocityX, velocityY));
-        }
+        // Define the body definition
+        BodyDef bodyDef = new BodyDef();
+        bodyDef.type = BodyDef.BodyType.DynamicBody; // The pig should move (dynamic)
+        bodyDef.position.set(x, y);  // Set the position to where the pig starts
+
+        // Create the body in the world
+        pigBody = world.createBody(bodyDef);
+
+        // Create the fixture for the body using the shape
+        FixtureDef fixtureDef = new FixtureDef();
+        fixtureDef.shape = pigShape;
+        fixtureDef.density = 1.0f; // Set the density of the pig
+        fixtureDef.friction = 0.5f; // Add some friction to the pig
+        fixtureDef.restitution = 0.2f; // Add some restitution (bounciness)
+
+        // Attach the fixture to the body
+        pigBody.createFixture(fixtureDef);
+
+        // Clean up the shape after use
+        pigShape.dispose();
     }
 
     @Override
     public void act(float delta) {
-        elapsedTime += delta;
-        // Total display duration in seconds
-        float duration = 2.0f;
-        if (elapsedTime >= duration) {
-            // Remove pigs after 3 seconds
-            remove();
-        } else {
-            // Update each pig's position based on its velocity
-            for (int i = 0; i < pigPositions.size(); i++) {
-                Vector2 position = pigPositions.get(i);
-                Vector2 velocity = pigVelocities.get(i);
-                position.x += velocity.x * delta; // Move horizontally
-                position.y += velocity.y * delta; // Move vertically (falling)
+        super.act(delta);
 
-                // Reset position if pig moves off screen (to wrap around)
-                if (position.x < 0) position.x = Gdx.graphics.getWidth();
-                if (position.x > Gdx.graphics.getWidth()) position.x = 0;
-                if (position.y < 0) position.y = Gdx.graphics.getHeight();
-                if (position.y > Gdx.graphics.getHeight()) position.y = 0; // Wrap vertically
-            }
-        }
+        // Update the position based on the Box2D body's position
+        position.set(pigBody.getPosition().x, pigBody.getPosition().y);
     }
 
     @Override
     public void draw(Batch batch, float parentAlpha) {
-        float scaleFactor = 0.5f; // Scale factor to reduce size
+        super.draw(batch, parentAlpha);
 
-        for (Vector2 position : pigPositions) {
-            batch.draw(pigTexture, position.x - (float) pigTexture.getWidth() / 2 * scaleFactor,
-                position.y - (float) pigTexture.getHeight() / 2 * scaleFactor,
-                pigTexture.getWidth() * scaleFactor, // Scaled width
-                pigTexture.getHeight() * scaleFactor); // Scaled height
-        }
+        float scaleFactor = 0.5f; // Scale the pig texture
+        batch.draw(pigTexture, position.x - pigTexture.getWidth() / 2 * scaleFactor,
+            position.y - pigTexture.getHeight() / 2 * scaleFactor,
+            pigTexture.getWidth() * scaleFactor, pigTexture.getHeight() * scaleFactor);
     }
 
     public void dispose() {
         pigTexture.dispose();
+        world.destroyBody(pigBody); // Don't forget to dispose of the Box2D body
+    }
+
+    // Optional getter method for the Box2D body to handle specific interactions if needed
+    public Body getPigBody() {
+        return pigBody;
     }
 }

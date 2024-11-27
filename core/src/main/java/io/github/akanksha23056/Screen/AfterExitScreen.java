@@ -21,11 +21,14 @@ public class AfterExitScreen implements Screen {
         this.afterExitImage = new Texture("afterexit.png");
         this.elapsedTime = 0;
 
-        // Initialize 20 pigs
+        // Initialize 20 pigs with random positions
         this.pigs = new Array<>();
-        for (int i = 0; i < 20; i++) {
-            Pig pig = new Pig();
-            pigs.add(pig);
+        for (int i = 0; i < 50; i++) {
+            // Create each pig with a random position (just an example for positions)
+            float x = (float) Math.random() * Gdx.graphics.getWidth();
+            float y = (float) Math.random() * Gdx.graphics.getHeight();
+
+
         }
     }
 
@@ -33,7 +36,7 @@ public class AfterExitScreen implements Screen {
     public void render(float delta) {
         elapsedTime += delta;
 
-        // Clear the screen and draw the afterExit image, scaling it to cover the entire screen
+        // Clear the screen and draw the afterExit image
         batch.begin();
 
         // Calculate the dimensions to cover the screen
@@ -45,8 +48,8 @@ public class AfterExitScreen implements Screen {
 
         // Update and draw each pig for the flying effect
         for (Pig pig : pigs) {
-            pig.act(delta);  // update pig position
-            pig.draw(batch, 1);    // draw pig
+            pig.act(delta);  // Update pig position
+            pig.draw(batch, 1);    // Draw pig
         }
         batch.end();
 
