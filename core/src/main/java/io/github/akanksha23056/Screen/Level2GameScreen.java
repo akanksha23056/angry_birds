@@ -21,6 +21,7 @@ public class Level2GameScreen implements Screen {
     private final Texture redBirdTexture;
     private final Texture yellowBirdTexture;
     private final Texture pigTexture;
+    private final Texture pigHurtTexture;
     private final Texture crateTexture;
     private final Texture pauseButtonTexture;
     private final Texture pauseButtonHoverTexture;
@@ -39,6 +40,8 @@ public class Level2GameScreen implements Screen {
     private boolean isDraggingYellowBird = false;
     private boolean isYellowBirdActive = false;
 
+
+
     // Gravity and damping
     private final Vector2 gravity = new Vector2(0, -0.05f);
     private final float damping = 0.98f;
@@ -51,10 +54,12 @@ public class Level2GameScreen implements Screen {
     private static class Pig {
         Rectangle bounds;
         Vector2 velocity;
+        boolean isHurt;
 
         Pig(Rectangle bounds) {
             this.bounds = bounds;
             this.velocity = new Vector2(0, 0);
+            this.isHurt = false;
         }
     }
 
@@ -74,6 +79,8 @@ public class Level2GameScreen implements Screen {
     // Ground height
     private final float groundY = 130;
 
+    private boolean isPaused = false;
+
     public Level2GameScreen(Main game) {
         this.game = game;
         this.batch = game.batch;
@@ -84,6 +91,7 @@ public class Level2GameScreen implements Screen {
         this.redBirdTexture = new Texture("redbird.png");
         this.yellowBirdTexture = new Texture("yellowbird.png");
         this.pigTexture = new Texture("pig.png");
+        this.pigHurtTexture = new Texture("pighurt.png");
         this.crateTexture = new Texture("crate.png");
         this.pauseButtonTexture = new Texture("pause.png");
         this.pauseButtonHoverTexture = new Texture("pause_hover.png");
@@ -103,12 +111,12 @@ public class Level2GameScreen implements Screen {
 
         // Initialize crates and pigs
         for (int i = 0; i < 3; i++) {
-            Crate crate = new Crate(new Rectangle(300 + i * 100, groundY, 50, 50));
-            crates.add(crate);
+            crates.add(new Crate(new Rectangle(300 + i * 100, groundY, 50, 50))); // X, Y, Width, Height
+        }
 
-            // Place pigs on top of crates
-            Pig pig = new Pig(new Rectangle(crate.bounds.x, crate.bounds.y + crate.bounds.height, 50, 50));
-            pigs.add(pig);
+        for (int i = 0; i < crates.size(); i++) {
+            Crate crate = crates.get(i);
+            pigs.add(new Pig(new Rectangle(crate.bounds.x, crate.bounds.y + crate.bounds.height, 50, 50)));
         }
     }
 
@@ -121,16 +129,21 @@ public class Level2GameScreen implements Screen {
 
     @Override
     public void render(float delta) {
+        if (isPaused) {
+            return; // Skip rendering while paused
+        }
         // Clear the screen
         ScreenUtils.clear(0.2f, 0.2f, 0.2f, 1.0f);
 
         // Update game state
         if (!isRedBirdLaunched) {
-            updateRedBird();
+            updateRedBirdPosition();
         } else if (isYellowBirdActive) {
             updateYellowBird();
         }
-        updateCratesAndPigs();
+        updateCrates();
+        updatePigs();
+        checkCollisions();
 
         // Draw everything
         batch.begin();
@@ -146,7 +159,8 @@ public class Level2GameScreen implements Screen {
         }
 
         for (Pig pig : pigs) {
-            batch.draw(pigTexture, pig.bounds.x, pig.bounds.y, pig.bounds.width, pig.bounds.height);
+            Texture textureToDraw = pig.isHurt ? pigHurtTexture : pigTexture;
+            batch.draw(textureToDraw, pig.bounds.x, pig.bounds.y, pig.bounds.width, pig.bounds.height);
         }
 
         for (Crate crate : crates) {
@@ -157,11 +171,35 @@ public class Level2GameScreen implements Screen {
         batch.end();
     }
 
-    private void updateRedBird() {
-        handleBirdDraggingAndLaunching(redBirdPosition, redBirdVelocity, () -> {
-            isRedBirdLaunched = true;
-            isYellowBirdActive = true;
-        });
+    private void updateRedBirdPosition() {
+        if (Gdx.input.isTouched()) {
+            Vector2 touchPosition = new Vector2(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
+
+            if (isDraggingRedBird || touchPosition.dst(slingshotPosition) <= slingshotRadius * 100) {
+                isDraggingRedBird = true;
+
+                if (touchPosition.dst(slingshotPosition) > slingshotRadius * 100) {
+                    redBirdPosition.set(slingshotPosition.cpy().add(touchPosition.sub(slingshotPosition).nor().scl(slingshotRadius * 100)));
+                } else {
+                    redBirdPosition.set(touchPosition);
+                }
+            }
+        } else if (isDraggingRedBird) {
+            isDraggingRedBird = false;
+
+            redBirdVelocity.set(slingshotPosition.cpy().sub(redBirdPosition).scl(0.1f));
+        }
+
+        if (!isDraggingRedBird) {
+            redBirdVelocity.add(gravity);
+            redBirdVelocity.scl(damping);
+            redBirdVelocity.add(redBirdVelocity);
+
+            if (redBirdPosition.y < groundY) {
+                redBirdPosition.y = groundY;
+                redBirdPosition.setZero();
+            }
+        }
     }
 
     private void updateYellowBird() {
@@ -204,7 +242,7 @@ public class Level2GameScreen implements Screen {
         }
     }
 
-    private void updateCratesAndPigs() {
+    private void updateCrates() {
         for (Crate crate : crates) {
             crate.velocity.add(gravity);
             crate.bounds.x += crate.velocity.x;
@@ -215,15 +253,45 @@ public class Level2GameScreen implements Screen {
                 crate.velocity.y = 0;
             }
         }
+    }
 
+    private void updatePigs() {
         for (Pig pig : pigs) {
-            pig.velocity.add(gravity);
+            boolean isSupported = false;
+
+            for (Crate crate : crates) {
+                if (crate.bounds.overlaps(new Rectangle(pig.bounds.x, pig.bounds.y - 1, pig.bounds.width, 1))) {
+                    isSupported = true;
+                    break;
+                }
+            }
+
+            if (!isSupported) {
+                pig.velocity.add(gravity);
+            }
+
             pig.bounds.x += pig.velocity.x;
             pig.bounds.y += pig.velocity.y;
 
             if (pig.bounds.y < groundY) {
                 pig.bounds.y = groundY;
                 pig.velocity.y = 0;
+            }
+        }
+    }
+
+    private void checkCollisions() {
+        for (Pig pig : pigs) {
+            if (!pig.isHurt &&
+                (pig.bounds.contains(redbirdPosition) || pig.bounds.contains(yellowbirdPosition.x, yellowbirdPosition.y))) {
+                pig.isHurt = true; // Change texture to hurt
+            }
+
+        }
+
+        for (Crate crate : crates) {
+            if (crate.bounds.contains(birdPosition.x, birdPosition.y)) {
+                crate.velocity.add(birdVelocity.cpy().scl(0.5f)); // Apply velocity to the crate
             }
         }
     }
