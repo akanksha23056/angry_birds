@@ -20,7 +20,7 @@ public class Level2GameScreen implements Screen {
     private final Texture slingshotTexture;
     private final Texture birdTexture;
     private final Texture pigTexture;
-    private final Texture pigHurtTexture; // New texture for hurt pig
+    private final Texture pigHurtTexture;
     private final Texture crateTexture;
 
     // Bird properties
@@ -39,10 +39,12 @@ public class Level2GameScreen implements Screen {
     // Pigs and Crates
     private static class Pig {
         Rectangle bounds;
+        Vector2 velocity;
         boolean isHurt;
 
         Pig(Rectangle bounds) {
             this.bounds = bounds;
+            this.velocity = new Vector2(0, 0);
             this.isHurt = false;
         }
     }
@@ -72,7 +74,7 @@ public class Level2GameScreen implements Screen {
         this.slingshotTexture = new Texture("sling.png");
         this.birdTexture = new Texture("redbird.png");
         this.pigTexture = new Texture("pig.png");
-        this.pigHurtTexture = new Texture("pighurt.png"); // Hurt pig texture
+        this.pigHurtTexture = new Texture("pighurt.png");
         this.crateTexture = new Texture("crate.png");
 
         // Slingshot position
@@ -109,6 +111,7 @@ public class Level2GameScreen implements Screen {
         // Update game mechanics
         updateBirdPosition();
         updateCrates();
+        updatePigs();
         checkCollisions();
 
         // Draw everything
@@ -181,6 +184,19 @@ public class Level2GameScreen implements Screen {
         }
     }
 
+    private void updatePigs() {
+        for (Pig pig : pigs) {
+            pig.velocity.add(gravity);
+            pig.bounds.x += pig.velocity.x;
+            pig.bounds.y += pig.velocity.y;
+
+            if (pig.bounds.y < groundY) {
+                pig.bounds.y = groundY;
+                pig.velocity.y = 0;
+            }
+        }
+    }
+
     private void checkCollisions() {
         for (Pig pig : pigs) {
             if (!pig.isHurt && pig.bounds.contains(birdPosition.x, birdPosition.y)) {
@@ -191,6 +207,13 @@ public class Level2GameScreen implements Screen {
         for (Crate crate : crates) {
             if (crate.bounds.contains(birdPosition.x, birdPosition.y)) {
                 crate.velocity.add(birdVelocity.cpy().scl(0.5f)); // Apply velocity to the crate
+            }
+
+            // Check for pig-crate collision
+            for (Pig pig : pigs) {
+                if (crate.bounds.overlaps(pig.bounds)) {
+                    pig.velocity.add(crate.velocity.cpy()); // Transfer crate velocity to pig
+                }
             }
         }
     }
