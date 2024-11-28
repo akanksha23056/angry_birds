@@ -10,6 +10,7 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import io.github.akanksha23056.Main;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 
 public class Level3GameScreen implements Screen {
     private final Main game;
@@ -18,7 +19,10 @@ public class Level3GameScreen implements Screen {
     // Textures
     private final Texture levelImage;
     private final Texture slingshotTexture;
-    private final Texture birdTexture;
+    private final Texture redBirdTexture;
+    private final Texture yellowBirdTexture;
+    private final Texture blackBirdTexture;
+    private final Texture blackExplodeTexture;
     private final Texture pigTexture;
     private final Texture pigHurtTexture;
     private final Texture crateTexture;
@@ -30,9 +34,14 @@ public class Level3GameScreen implements Screen {
     private final Rectangle pauseButtonBounds;
 
     // Bird properties
-    private Vector2 birdPosition;
+    private enum BirdType { RED, YELLOW, BLACK }
+
+    private BirdType currentBirdType = BirdType.RED;
+    private Vector2 redBirdPosition, yellowBirdPosition, blackBirdPosition;
     private Vector2 birdVelocity;
     private boolean isDragging;
+    private boolean isBirdLaunched = false;
+    private boolean isBlackBirdExploded = false;
 
     // Gravity and damping
     private final Vector2 gravity = new Vector2(0, -0.05f);
@@ -79,7 +88,7 @@ public class Level3GameScreen implements Screen {
     private final ArrayList<Crate> crates = new ArrayList<>();
     private final ArrayList<Glass> glassSlabs = new ArrayList<>();
 
-    // Ground height (customizable for Level 3)
+    // Ground height
     private final float groundY = 100;
 
     // Pause state
@@ -92,7 +101,10 @@ public class Level3GameScreen implements Screen {
         // Load textures
         this.levelImage = new Texture("level3game.png");
         this.slingshotTexture = new Texture("sling.png");
-        this.birdTexture = new Texture("redbird.png");
+        this.redBirdTexture = new Texture("redbird.png");
+        this.yellowBirdTexture = new Texture("yellowbird.png");
+        this.blackBirdTexture = new Texture("blackbird.png");
+        this.blackExplodeTexture = new Texture("blackexplode.png");
         this.pigTexture = new Texture("pig.png");
         this.pigHurtTexture = new Texture("pighurt.png");
         this.crateTexture = new Texture("crate.png");
@@ -103,42 +115,35 @@ public class Level3GameScreen implements Screen {
         // Pause Button
         this.pauseButtonBounds = new Rectangle(10, Gdx.graphics.getHeight() - 120, 100, 100);
 
-        // Slingshot position (aligned with the new ground level)
+        // Slingshot position
         this.slingshotPosition = new Vector2(200, groundY + 40);
 
-        // Bird properties (adjusted to be behind the sling)
-        this.birdPosition = new Vector2(slingshotPosition.x - 30, slingshotPosition.y);
+        // Bird positions
+        this.redBirdPosition = new Vector2(slingshotPosition.x - 30, slingshotPosition.y);
+        this.yellowBirdPosition = new Vector2(slingshotPosition.x - 50, slingshotPosition.y);
+        this.blackBirdPosition = new Vector2(slingshotPosition.x - 70, slingshotPosition.y);
         this.birdVelocity = new Vector2(0, 0);
         this.isDragging = false;
 
         // Initialize crates
         for (int i = 0; i < 3; i++) {
-            crates.add(new Crate(new Rectangle(350 + i * 100, groundY, 50, 50))); // Ground level crates
+            crates.add(new Crate(new Rectangle(300 + i * 100, groundY, 50, 50)));
         }
 
-        // Initialize vertical glass slabs (positioned above crates)
+        // Initialize glass slabs
         for (Crate crate : crates) {
-            glassSlabs.add(new Glass(new Rectangle(crate.bounds.x + 15, crate.bounds.y + crate.bounds.height, 20, 100))); // Thin vertical slabs
+            glassSlabs.add(new Glass(new Rectangle(crate.bounds.x + 15, crate.bounds.y + crate.bounds.height, 20, 100)));
         }
 
-        // Initialize pigs (positioned above vertical glass slabs)
+        // Initialize pigs
         for (Glass glass : glassSlabs) {
-            pigs.add(new Pig(new Rectangle(glass.bounds.x - 15, glass.bounds.y + glass.bounds.height, 50, 50))); // Pigs on top
-        }
-    }
-
-    @Override
-    public void show() {
-        if (!game.musicMuted && !game.backgroundMusic.isPlaying()) {
-            game.backgroundMusic.play();
+            pigs.add(new Pig(new Rectangle(glass.bounds.x - 15, glass.bounds.y + glass.bounds.height, 50, 50)));
         }
     }
 
     @Override
     public void render(float delta) {
-        if (isPaused) {
-            return; // Skip rendering while paused
-        }
+        if (isPaused) return;
 
         // Clear screen
         ScreenUtils.clear(0.2f, 0.2f, 0.2f, 1.0f);
@@ -159,8 +164,18 @@ public class Level3GameScreen implements Screen {
         // Draw slingshot
         batch.draw(slingshotTexture, slingshotPosition.x - 25, slingshotPosition.y - 50, 50, 100);
 
-        // Draw bird
-        batch.draw(birdTexture, birdPosition.x - 25, birdPosition.y - 25, 50, 50);
+        // Draw birds
+        if (!isBirdLaunched || currentBirdType == BirdType.RED) {
+            batch.draw(redBirdTexture, redBirdPosition.x - 25, redBirdPosition.y - 25, 50, 50);
+        }
+        if (!isBirdLaunched || currentBirdType == BirdType.YELLOW) {
+            batch.draw(yellowBirdTexture, yellowBirdPosition.x - 25, yellowBirdPosition.y - 25, 50, 50);
+        }
+        if (!isBlackBirdExploded) {
+            batch.draw(blackBirdTexture, blackBirdPosition.x - 25, blackBirdPosition.y - 25, 50, 50);
+        } else {
+            batch.draw(blackExplodeTexture, blackBirdPosition.x - 50, blackBirdPosition.y - 50, 100, 100);
+        }
 
         // Draw pigs
         for (Pig pig : pigs) {
@@ -178,53 +193,64 @@ public class Level3GameScreen implements Screen {
             batch.draw(glassTexture, glass.bounds.x, glass.bounds.y, glass.bounds.width, glass.bounds.height);
         }
 
-        // Draw the pause button
+        // Draw pause button
         drawPauseButton();
 
         batch.end();
     }
 
-    private void updateGlassSlabs() {
-        for (Glass glass : glassSlabs) {
-            glass.velocity.add(gravity);
-            glass.bounds.x += glass.velocity.x;
-            glass.bounds.y += glass.velocity.y;
-
-            if (glass.bounds.y < groundY + crates.get(0).bounds.height) { // Stop at crate height
-                glass.bounds.y = groundY + crates.get(0).bounds.height;
-                glass.velocity.y = 0;
-            }
-        }
-    }
-
     private void updateBirdPosition() {
-        if (Gdx.input.isTouched()) {
+        Vector2 currentBirdPosition;
+        switch (currentBirdType) {
+            case RED:
+                currentBirdPosition = redBirdPosition;
+                break;
+            case YELLOW:
+                currentBirdPosition = yellowBirdPosition;
+                break;
+            case BLACK:
+                currentBirdPosition = blackBirdPosition;
+                break;
+            default:
+                throw new IllegalStateException("Unexpected value: " + currentBirdType);
+        }
+
+        if (isBirdLaunched) {
+            birdVelocity.add(gravity);
+            birdVelocity.scl(damping);
+            currentBirdPosition.add(birdVelocity);
+
+            if (currentBirdPosition.y <= groundY) {
+                currentBirdPosition.y = groundY;
+                birdVelocity.setZero();
+
+                if (currentBirdType == BirdType.BLACK && !isBlackBirdExploded) {
+                    isBlackBirdExploded = true;
+                    handleExplosion();
+                } else if (currentBirdType == BirdType.RED) {
+                    currentBirdType = BirdType.YELLOW;
+                    isBirdLaunched = false;
+                } else if (currentBirdType == BirdType.YELLOW) {
+                    currentBirdType = BirdType.BLACK;
+                    isBirdLaunched = false;
+                }
+            }
+        } else if (Gdx.input.isTouched()) {
             Vector2 touchPosition = new Vector2(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
 
             if (isDragging || touchPosition.dst(slingshotPosition) <= slingshotRadius * 100) {
                 isDragging = true;
 
                 if (touchPosition.dst(slingshotPosition) > slingshotRadius * 100) {
-                    birdPosition.set(slingshotPosition.cpy().add(touchPosition.sub(slingshotPosition).nor().scl(slingshotRadius * 100)));
+                    currentBirdPosition.set(slingshotPosition.cpy().add(touchPosition.sub(slingshotPosition).nor().scl(slingshotRadius * 100)));
                 } else {
-                    birdPosition.set(touchPosition);
+                    currentBirdPosition.set(touchPosition);
                 }
             }
         } else if (isDragging) {
             isDragging = false;
-
-            birdVelocity.set(slingshotPosition.cpy().sub(birdPosition).scl(0.1f));
-        }
-
-        if (!isDragging) {
-            birdVelocity.add(gravity);
-            birdVelocity.scl(damping);
-            birdPosition.add(birdVelocity);
-
-            if (birdPosition.y < groundY) {
-                birdPosition.y = groundY;
-                birdVelocity.setZero();
-            }
+            isBirdLaunched = true;
+            birdVelocity.set(slingshotPosition.cpy().sub(currentBirdPosition).scl(0.1f));
         }
     }
 
@@ -237,6 +263,19 @@ public class Level3GameScreen implements Screen {
             if (crate.bounds.y < groundY) {
                 crate.bounds.y = groundY;
                 crate.velocity.y = 0;
+            }
+        }
+    }
+
+    private void updateGlassSlabs() {
+        for (Glass glass : glassSlabs) {
+            glass.velocity.add(gravity);
+            glass.bounds.x += glass.velocity.x;
+            glass.bounds.y += glass.velocity.y;
+
+            if (glass.bounds.y < groundY + crates.get(0).bounds.height) {
+                glass.bounds.y = groundY + crates.get(0).bounds.height;
+                glass.velocity.y = 0;
             }
         }
     }
@@ -267,21 +306,62 @@ public class Level3GameScreen implements Screen {
     }
 
     private void checkCollisions() {
+        Vector2 currentBirdPosition;
+        switch (currentBirdType) {
+            case RED:
+                currentBirdPosition = redBirdPosition;
+                break;
+            case YELLOW:
+                currentBirdPosition = yellowBirdPosition;
+                break;
+            case BLACK:
+                currentBirdPosition = blackBirdPosition;
+                break;
+            default:
+                throw new IllegalStateException("Unexpected value: " + currentBirdType);
+        }
+
         for (Pig pig : pigs) {
-            if (!pig.isHurt && pig.bounds.contains(birdPosition.x, birdPosition.y)) {
-                pig.isHurt = true; // Change texture to hurt
+            if (!pig.isHurt && currentBirdPosition.dst(pig.bounds.x + 25, pig.bounds.y + 25) < 25) {
+                pig.isHurt = true;
             }
         }
 
         for (Crate crate : crates) {
-            if (crate.bounds.contains(birdPosition.x, birdPosition.y)) {
-                crate.velocity.add(birdVelocity.cpy().scl(0.5f)); // Apply velocity to the crate
+            if (currentBirdPosition.dst(crate.bounds.x + 25, crate.bounds.y + 25) < 25) {
+                crate.velocity.add(birdVelocity.cpy().scl(0.5f));
             }
         }
 
         for (Glass glass : glassSlabs) {
-            if (glass.bounds.contains(birdPosition.x, birdPosition.y)) {
-                glass.velocity.add(birdVelocity.cpy().scl(0.5f)); // Apply velocity to the glass
+            if (currentBirdPosition.dst(glass.bounds.x + 10, glass.bounds.y + 50) < 25) {
+                glass.velocity.add(birdVelocity.cpy().scl(0.5f));
+            }
+        }
+    }
+
+    private void handleExplosion() {
+        Iterator<Pig> pigIterator = pigs.iterator();
+        while (pigIterator.hasNext()) {
+            Pig pig = pigIterator.next();
+            if (blackBirdPosition.dst(pig.bounds.x + 25, pig.bounds.y + 25) < 100) {
+                pigIterator.remove();
+            }
+        }
+
+        Iterator<Crate> crateIterator = crates.iterator();
+        while (crateIterator.hasNext()) {
+            Crate crate = crateIterator.next();
+            if (blackBirdPosition.dst(crate.bounds.x + 25, crate.bounds.y + 25) < 100) {
+                crateIterator.remove();
+            }
+        }
+
+        Iterator<Glass> glassIterator = glassSlabs.iterator();
+        while (glassIterator.hasNext()) {
+            Glass glass = glassIterator.next();
+            if (blackBirdPosition.dst(glass.bounds.x + 10, glass.bounds.y + 50) < 100) {
+                glassIterator.remove();
             }
         }
     }
@@ -302,14 +382,23 @@ public class Level3GameScreen implements Screen {
 
     private void pauseGame() {
         game.setScreen(new PauseScreen(game, this));
-        // Transition to pause menu
+    }
+
+    @Override
+    public void show() {
+        if (!game.musicMuted && !game.backgroundMusic.isPlaying()) {
+            game.backgroundMusic.play();
+        }
     }
 
     @Override
     public void dispose() {
         levelImage.dispose();
         slingshotTexture.dispose();
-        birdTexture.dispose();
+        redBirdTexture.dispose();
+        yellowBirdTexture.dispose();
+        blackBirdTexture.dispose();
+        blackExplodeTexture.dispose();
         pigTexture.dispose();
         pigHurtTexture.dispose();
         crateTexture.dispose();
