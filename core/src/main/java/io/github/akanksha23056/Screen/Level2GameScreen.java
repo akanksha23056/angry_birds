@@ -1,7 +1,6 @@
 package io.github.akanksha23056.Screen;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -30,16 +29,36 @@ public class Level2GameScreen implements Screen {
     private boolean isDragging;
 
     // Gravity and damping
-    private final Vector2 gravity = new Vector2(0, -0.05f); // Simulated gravity
-    private final float damping = 0.98f; // Slow down velocity over time
+    private final Vector2 gravity = new Vector2(0, -0.05f);
+    private final float damping = 0.98f;
 
     // Sling properties
     private final Vector2 slingshotPosition;
     private final float slingshotRadius = 1.5f;
 
     // Pigs and Crates
-    private final ArrayList<Rectangle> pigs = new ArrayList<>();
-    private final ArrayList<Rectangle> crates = new ArrayList<>();
+    private static class Pig {
+        Rectangle bounds;
+        boolean isHurt;
+
+        Pig(Rectangle bounds) {
+            this.bounds = bounds;
+            this.isHurt = false;
+        }
+    }
+
+    private static class Crate {
+        Rectangle bounds;
+        Vector2 velocity;
+
+        Crate(Rectangle bounds) {
+            this.bounds = bounds;
+            this.velocity = new Vector2(0, 0);
+        }
+    }
+
+    private final ArrayList<Pig> pigs = new ArrayList<>();
+    private final ArrayList<Crate> crates = new ArrayList<>();
 
     // Ground height
     private final float groundY = 100;
@@ -53,6 +72,7 @@ public class Level2GameScreen implements Screen {
         this.slingshotTexture = new Texture("sling.png");
         this.birdTexture = new Texture("redbird.png");
         this.pigTexture = new Texture("pig.png");
+        this.pigHurtTexture = new Texture("pighurt.png"); // Hurt pig texture
         this.crateTexture = new Texture("crate.png");
 
         // Slingshot position
@@ -65,12 +85,12 @@ public class Level2GameScreen implements Screen {
 
         // Initialize pigs
         for (int i = 0; i < 3; i++) {
-            pigs.add(new Rectangle(400 + i * 100, 150, 50, 50)); // X, Y, Width, Height
+            pigs.add(new Pig(new Rectangle(400 + i * 100, 150, 50, 50))); // X, Y, Width, Height
         }
 
         // Initialize crates
         for (int i = 0; i < 3; i++) {
-            crates.add(new Rectangle(400 + i * 100, 100, 50, 50)); // X, Y, Width, Height
+            crates.add(new Crate(new Rectangle(400 + i * 100, 100, 50, 50))); // X, Y, Width, Height
         }
     }
 
@@ -88,8 +108,7 @@ public class Level2GameScreen implements Screen {
 
         // Update game mechanics
         updateBirdPosition();
-
-        // Check collisions
+        updateCrates();
         checkCollisions();
 
         // Draw everything
@@ -105,27 +124,26 @@ public class Level2GameScreen implements Screen {
         batch.draw(birdTexture, birdPosition.x - 25, birdPosition.y - 25, 50, 50);
 
         // Draw pigs
-        for (Rectangle pig : pigs) {
-            batch.draw(pigTexture, pig.x, pig.y, pig.width, pig.height);
+        for (Pig pig : pigs) {
+            Texture textureToDraw = pig.isHurt ? pigHurtTexture : pigTexture;
+            batch.draw(textureToDraw, pig.bounds.x, pig.bounds.y, pig.bounds.width, pig.bounds.height);
         }
 
         // Draw crates
-        for (Rectangle crate : crates) {
-            batch.draw(crateTexture, crate.x, crate.y, crate.width, crate.height);
+        for (Crate crate : crates) {
+            batch.draw(crateTexture, crate.bounds.x, crate.bounds.y, crate.bounds.width, crate.bounds.height);
         }
 
         batch.end();
     }
 
     private void updateBirdPosition() {
-        // Dragging mechanics
         if (Gdx.input.isTouched()) {
             Vector2 touchPosition = new Vector2(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
 
             if (isDragging || touchPosition.dst(slingshotPosition) <= slingshotRadius * 100) {
                 isDragging = true;
 
-                // Constrain bird within slingshot radius
                 if (touchPosition.dst(slingshotPosition) > slingshotRadius * 100) {
                     birdPosition.set(slingshotPosition.cpy().add(touchPosition.sub(slingshotPosition).nor().scl(slingshotRadius * 100)));
                 } else {
@@ -133,20 +151,16 @@ public class Level2GameScreen implements Screen {
                 }
             }
         } else if (isDragging) {
-            // Release the bird
             isDragging = false;
 
-            // Launch bird
-            birdVelocity.set(slingshotPosition.cpy().sub(birdPosition).scl(0.1f)); // Adjust scaling factor for speed
+            birdVelocity.set(slingshotPosition.cpy().sub(birdPosition).scl(0.1f));
         }
 
-        // Apply velocity and gravity
         if (!isDragging) {
             birdVelocity.add(gravity);
             birdVelocity.scl(damping);
             birdPosition.add(birdVelocity);
 
-            // Keep bird above ground
             if (birdPosition.y < groundY) {
                 birdPosition.y = groundY;
                 birdVelocity.setZero();
@@ -154,20 +168,29 @@ public class Level2GameScreen implements Screen {
         }
     }
 
+    private void updateCrates() {
+        for (Crate crate : crates) {
+            crate.velocity.add(gravity);
+            crate.bounds.x += crate.velocity.x;
+            crate.bounds.y += crate.velocity.y;
+
+            if (crate.bounds.y < groundY) {
+                crate.bounds.y = groundY;
+                crate.velocity.y = 0;
+            }
+        }
+    }
+
     private void checkCollisions() {
-        // Check if bird hits any pigs
-        for (int i = pigs.size() - 1; i >= 0; i--) {
-            Rectangle pig = pigs.get(i);
-            if (pig.contains(birdPosition.x, birdPosition.y)) {
-                pigs.remove(i); // Remove pig
+        for (Pig pig : pigs) {
+            if (!pig.isHurt && pig.bounds.contains(birdPosition.x, birdPosition.y)) {
+                pig.isHurt = true; // Change texture to hurt
             }
         }
 
-        // Check if bird hits any crates
-        for (int i = crates.size() - 1; i >= 0; i--) {
-            Rectangle crate = crates.get(i);
-            if (crate.contains(birdPosition.x, birdPosition.y)) {
-                crates.remove(i); // Remove crate
+        for (Crate crate : crates) {
+            if (crate.bounds.contains(birdPosition.x, birdPosition.y)) {
+                crate.velocity.add(birdVelocity.cpy().scl(0.5f)); // Apply velocity to the crate
             }
         }
     }
@@ -178,6 +201,7 @@ public class Level2GameScreen implements Screen {
         slingshotTexture.dispose();
         birdTexture.dispose();
         pigTexture.dispose();
+        pigHurtTexture.dispose();
         crateTexture.dispose();
     }
 
