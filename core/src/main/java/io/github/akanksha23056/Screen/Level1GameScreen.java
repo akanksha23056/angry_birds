@@ -74,6 +74,9 @@ public class Level1GameScreen implements Screen {
         // Create screen boundaries
         createScreenBoundaries();
 
+        // Create ground
+        createGround();
+
         this.isPaused = false; // Initialize pause state as not paused
     }
 
@@ -188,6 +191,24 @@ public class Level1GameScreen implements Screen {
         ceilingShape.set(-screenWidth / 2, 0, screenWidth / 2, 0);
         ceilingBody.createFixture(ceilingShape, 0);
         ceilingShape.dispose();
+    }
+
+    private void createGround() {
+        float groundWidth = Gdx.graphics.getWidth() / 100f;
+        float groundHeight = 1f; // Height of the ground
+
+        // Create ground body
+        BodyDef groundBodyDef = new BodyDef();
+        groundBodyDef.position.set(groundWidth / 2, groundHeight / 2);
+        Body groundBody = world.createBody(groundBodyDef);
+
+        // Create ground shape
+        PolygonShape groundShape = new PolygonShape();
+        groundShape.setAsBox(groundWidth / 2, groundHeight / 2);
+
+        // Attach shape to the ground body
+        groundBody.createFixture(groundShape, 0);
+        groundShape.dispose();
     }
 
     @Override
@@ -309,7 +330,7 @@ public class Level1GameScreen implements Screen {
             float t = i * timeStep;
             float x = startX + velocity.x * t;
             float y = startY + velocity.y * t + 0.5f * gravity * t * t;
-            batch.draw(new Texture("trajectory.png"), x, y, 5, 5); // Draw trajectory point
+            batch.draw(new Texture("sling.png"), x, y, 5, 5); // Draw trajectory point
         }
     }
 }
