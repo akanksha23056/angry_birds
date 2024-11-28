@@ -13,7 +13,9 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import io.github.akanksha23056.Main;
 import io.github.akanksha23056.Objects.Bird;
+import io.github.akanksha23056.Objects.Block;
 import io.github.akanksha23056.Objects.Catapult;
+import io.github.akanksha23056.Objects.Pig;
 
 public class Level1GameScreen implements Screen {
     private final Main game;
@@ -45,7 +47,6 @@ public class Level1GameScreen implements Screen {
         this.pauseButtonHoverTexture = new Texture("pause_hover.png");
         this.pauseButtonBounds = new Rectangle(10, Gdx.graphics.getHeight() - 120, 100, 100);
 
-
         // Initialize Box2D World
         world = new World(new Vector2(0, -9.8f), true); // Gravity points downward
         debugRenderer = new Box2DDebugRenderer();
@@ -67,6 +68,12 @@ public class Level1GameScreen implements Screen {
             setCurrentBird(birds.first());
         }
 
+        // Initialize Blocks
+        initializeBlocks();
+
+        // Create screen boundaries
+        createScreenBoundaries();
+
         this.isPaused = false; // Initialize pause state as not paused
     }
 
@@ -76,7 +83,7 @@ public class Level1GameScreen implements Screen {
 
         // Create three birds as an example
         for (int i = 0; i < 3; i++) {
-            Bird bird = new Bird(world, "redbird.png", birdStartX + i * 50, birdStartY);
+            Bird bird = new Bird(world, "redbird.png", birdStartX + i * 50, birdStartY, 0.1f);
             birds.add(bird);
             stage.addActor(bird);
         }
@@ -95,10 +102,10 @@ public class Level1GameScreen implements Screen {
         // Initialize Box2D physics for the current bird
         BodyDef birdBodyDef = new BodyDef();
         birdBodyDef.type = BodyDef.BodyType.DynamicBody;
-        birdBodyDef.position.set(currentBird.getX(), currentBird.getY());
+        birdBodyDef.position.set(currentBird.getX() / 100, currentBird.getY() / 100);
 
         PolygonShape birdShape = new PolygonShape();
-        birdShape.setAsBox(currentBird.getWidth() / 2, currentBird.getHeight() / 2);
+        birdShape.setAsBox(currentBird.getWidth() / 200, currentBird.getHeight() / 200);
 
         FixtureDef birdFixtureDef = new FixtureDef();
         birdFixtureDef.shape = birdShape;
@@ -112,6 +119,75 @@ public class Level1GameScreen implements Screen {
         birdShape.dispose(); // Clean up shape after use
 
         currentBird.reset(); // Reset bird physics and state
+    }
+
+    private void initializeBlocks() {
+        float scaleFactor = 0.1f; // 30% smaller than the previous 0.2f scale factor
+        float startX1 = Gdx.graphics.getWidth() - 200; // Start position for the first stack
+        float startX2 = Gdx.graphics.getWidth() - 100; // Start position for the second stack
+        float startY = 100; // Y position same as the bird and sling
+
+        // Add a pig on top of the second stack
+        Pig pig = new Pig(world, "pig.png", startX2, startY, scaleFactor);
+        stage.addActor(pig);
+
+        // Create first stack of two blocks
+        for (int i = 0; i < 2; i++) {
+            Block block = new Block(world, "crate.png", startX1, startY, scaleFactor);
+            stage.addActor(block);
+            startY -= block.getHeight() + 10; // Arrange blocks with a gap
+        }
+
+        // Reset startY for the second stack
+        startY = 100; // Y position same as the bird and sling
+
+        // Create second stack of two blocks
+        for (int i = 0; i < 2; i++) {
+            Block block = new Block(world, "crate.png", startX2, startY, scaleFactor);
+            stage.addActor(block);
+            startY -= block.getHeight() + 10; // Arrange blocks with a gap
+        }
+    }
+
+    private void createScreenBoundaries() {
+        float screenWidth = Gdx.graphics.getWidth() / 100f;
+        float screenHeight = Gdx.graphics.getHeight() / 100f;
+
+        // Create ground
+        BodyDef groundBodyDef = new BodyDef();
+        groundBodyDef.position.set(screenWidth / 2, 0);
+        Body groundBody = world.createBody(groundBodyDef);
+        EdgeShape groundShape = new EdgeShape();
+        groundShape.set(-screenWidth / 2, 0, screenWidth / 2, 0);
+        groundBody.createFixture(groundShape, 0);
+        groundShape.dispose();
+
+        // Create left wall
+        BodyDef leftWallBodyDef = new BodyDef();
+        leftWallBodyDef.position.set(0, screenHeight / 2);
+        Body leftWallBody = world.createBody(leftWallBodyDef);
+        EdgeShape leftWallShape = new EdgeShape();
+        leftWallShape.set(0, -screenHeight / 2, 0, screenHeight / 2);
+        leftWallBody.createFixture(leftWallShape, 0);
+        leftWallShape.dispose();
+
+        // Create right wall
+        BodyDef rightWallBodyDef = new BodyDef();
+        rightWallBodyDef.position.set(screenWidth, screenHeight / 2);
+        Body rightWallBody = world.createBody(rightWallBodyDef);
+        EdgeShape rightWallShape = new EdgeShape();
+        rightWallShape.set(0, -screenHeight / 2, 0, screenHeight / 2);
+        rightWallBody.createFixture(rightWallShape, 0);
+        rightWallShape.dispose();
+
+        // Create ceiling
+        BodyDef ceilingBodyDef = new BodyDef();
+        ceilingBodyDef.position.set(screenWidth / 2, screenHeight);
+        Body ceilingBody = world.createBody(ceilingBodyDef);
+        EdgeShape ceilingShape = new EdgeShape();
+        ceilingShape.set(-screenWidth / 2, 0, screenWidth / 2, 0);
+        ceilingBody.createFixture(ceilingShape, 0);
+        ceilingShape.dispose();
     }
 
     @Override
@@ -135,6 +211,11 @@ public class Level1GameScreen implements Screen {
 
         // Draw the pause button at the end to ensure it is on top
         drawPauseButton();
+
+        // Draw the trajectory if the bird is being dragged
+        if (currentBird != null && currentBird.isDragging()) {
+            drawTrajectory(currentBird.getX(), currentBird.getY(), new Vector2(10, 10)); // Example velocity
+        }
 
         batch.end();
 
@@ -218,4 +299,17 @@ public class Level1GameScreen implements Screen {
     public void resume() {}
     @Override
     public void hide() {}
+
+    private void drawTrajectory(float startX, float startY, Vector2 velocity) {
+        float timeStep = 0.1f; // Time step for calculating trajectory points
+        int numPoints = 30; // Number of points to draw
+        float gravity = -9.8f; // Gravity value
+
+        for (int i = 0; i < numPoints; i++) {
+            float t = i * timeStep;
+            float x = startX + velocity.x * t;
+            float y = startY + velocity.y * t + 0.5f * gravity * t * t;
+            batch.draw(new Texture("trajectory.png"), x, y, 5, 5); // Draw trajectory point
+        }
+    }
 }

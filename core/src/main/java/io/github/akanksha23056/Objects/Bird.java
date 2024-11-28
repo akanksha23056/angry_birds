@@ -1,99 +1,92 @@
 package io.github.akanksha23056.Objects;
 
-import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.Batch;
-import com.badlogic.gdx.physics.box2d.*;
-import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.InputListener;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
+import com.badlogic.gdx.physics.box2d.*;
 
-public class Bird extends Actor {
-    private final Texture birdTexture;
-    private final Body birdBody;
+public class Bird extends Image {
+    private Body body;
     private boolean isDragging = false;
-    private final Vector2 initialPosition; // Initial position of the bird
-    private boolean launched = false;     // Tracks if the bird has been launched
 
-    public Bird(World world, String texturePath, float x, float y) {
-        this.birdTexture = new Texture(texturePath);
-
-        // Save the initial position
-        this.initialPosition = new Vector2(x / 100f, y / 100f);
-
-        // Define the bird body in the Box2D world
-        BodyDef bodyDef = new BodyDef();
-        bodyDef.type = BodyDef.BodyType.DynamicBody;
-        bodyDef.position.set(initialPosition);
-        birdBody = world.createBody(bodyDef);
-
-        // Define the bird shape
-        CircleShape circle = new CircleShape();
-        circle.setRadius(0.5f); // Radius in meters
-        FixtureDef fixtureDef = new FixtureDef();
-        fixtureDef.shape = circle;
-        fixtureDef.density = 1f;
-        fixtureDef.friction = 0.3f;
-        fixtureDef.restitution = 0.6f; // Bounciness
-        birdBody.createFixture(fixtureDef);
-        circle.dispose();
-
-        // Set bird size and position for rendering
-        setSize(50, 50); // Pixel size
+    public Bird(World world, String texturePath, float x, float y, float scaleFactor) {
+        super(new Texture(texturePath));
+        setSize(getWidth() * scaleFactor, getHeight() * scaleFactor);
         setPosition(x, y);
 
-        // Initially deactivate physics simulation
-        birdBody.setAwake(false);
-    }
+        // Define Box2D body
+        BodyDef bodyDef = new BodyDef();
+        bodyDef.type = BodyDef.BodyType.DynamicBody;
+        bodyDef.position.set(x / 100, y / 100); // Scale to Box2D units
 
-    @Override
-    public void draw(Batch batch, float parentAlpha) {
-        // Draw the bird at its physics position
-        Vector2 position = birdBody.getPosition();
-        float x = position.x * 100 - getWidth() / 2;
-        float y = position.y * 100 - getHeight() / 2;
-        batch.draw(birdTexture, x, y, getWidth(), getHeight());
+        body = world.createBody(bodyDef);
+
+        // Define Box2D shape
+        PolygonShape shape = new PolygonShape();
+        shape.setAsBox(getWidth() / 200, getHeight() / 200); // Half-width and half-height
+
+        // Attach shape to the body
+        FixtureDef fixtureDef = new FixtureDef();
+        fixtureDef.shape = shape;
+        fixtureDef.density = 1.0f;
+        fixtureDef.restitution = 0.3f;
+
+        body.createFixture(fixtureDef);
+        shape.dispose();
+
+        // Add input listener for dragging
+        addListener(new InputListener() {
+            @Override
+            public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                isDragging = true;
+                return true;
+            }
+
+            @Override
+            public void touchDragged(InputEvent event, float x, float y, int pointer) {
+                if (isDragging) {
+                    setPosition(event.getStageX() - getWidth() / 2, event.getStageY() - getHeight() / 2);
+                }
+            }
+
+            @Override
+            public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+                isDragging = false;
+            }
+        });
     }
 
     @Override
     public void act(float delta) {
         super.act(delta);
-
-        // Handle dragging and launching logic
-        if (isDragging) {
-            Vector2 touchPosition = new Vector2(Gdx.input.getX() / 100f, (Gdx.graphics.getHeight() - Gdx.input.getY()) / 100f);
-            birdBody.setTransform(touchPosition, 0);
-        } else if (!launched) {
-            // Reset position to initial point if not launched
-            birdBody.setTransform(initialPosition, 0);
-        }
-    }
-
-    public void handleInput() {
-        // Handle touch events for dragging
-        if (Gdx.input.isTouched()) {
-            isDragging = true;
-        } else if (isDragging) {
-            // Release bird when drag ends
-            isDragging = false;
-            launch(new Vector2(-15f, 10f)); // Example launch velocity
+        if (!isDragging) {
+            // Synchronize position with Box2D body
+            setPosition(body.getPosition().x * 100 - getWidth() / 2, body.getPosition().y * 100 - getHeight() / 2);
         }
     }
 
     public void launch(Vector2 velocity) {
-        birdBody.setAwake(true); // Activate physics
-        birdBody.setLinearVelocity(velocity); // Apply velocity to the bird
-        launched = true; // Mark the bird as launched
+        body.setLinearVelocity(velocity);
     }
 
     public void reset() {
-        // Reset bird to initial position and state
-        birdBody.setTransform(initialPosition, 0);
-        birdBody.setLinearVelocity(Vector2.Zero);
-        birdBody.setAwake(false);
-        launched = false;
+        body.setLinearVelocity(Vector2.Zero);
+        body.setAngularVelocity(0);
+        body.setTransform(getX() / 100, getY() / 100, 0);
+    }
+
+    public boolean isDragging() {
+        return isDragging;
     }
 
     public void dispose() {
-        birdTexture.dispose();
+        getTexture().dispose();
+    }
+
+    private ApplicationListener getTexture() {
+        return null;
     }
 }

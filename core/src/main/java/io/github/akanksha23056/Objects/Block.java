@@ -1,7 +1,7 @@
 package io.github.akanksha23056.Objects;
 
+import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.physics.box2d.*;
 
@@ -43,5 +43,9 @@ public class Block extends Image {
 
     public void dispose() {
         getTexture().dispose();
+    }
+
+    private ApplicationListener getTexture() {
+        return null;
     }
 }
