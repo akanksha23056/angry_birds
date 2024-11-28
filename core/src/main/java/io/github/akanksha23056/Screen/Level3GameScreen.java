@@ -113,17 +113,17 @@ public class Level3GameScreen implements Screen {
 
         // Initialize crates
         for (int i = 0; i < 3; i++) {
-            crates.add(new Crate(new Rectangle(350 + i * 100, groundY, 50, 50))); // X, Y, Width, Height
+            crates.add(new Crate(new Rectangle(350 + i * 100, groundY, 50, 50))); // Ground level crates
         }
 
-        // Initialize glass slabs (positioned above crates)
+        // Initialize vertical glass slabs (positioned above crates)
         for (Crate crate : crates) {
-            glassSlabs.add(new Glass(new Rectangle(crate.bounds.x, crate.bounds.y + crate.bounds.height, 50, 20))); // Glass is thinner
+            glassSlabs.add(new Glass(new Rectangle(crate.bounds.x + 15, crate.bounds.y + crate.bounds.height, 20, 100))); // Thin vertical slabs
         }
 
-        // Initialize pigs (positioned above glass slabs)
+        // Initialize pigs (positioned above vertical glass slabs)
         for (Glass glass : glassSlabs) {
-            pigs.add(new Pig(new Rectangle(glass.bounds.x, glass.bounds.y + glass.bounds.height, 50, 50)));
+            pigs.add(new Pig(new Rectangle(glass.bounds.x - 15, glass.bounds.y + glass.bounds.height, 50, 50))); // Pigs on top
         }
     }
 
@@ -190,8 +190,8 @@ public class Level3GameScreen implements Screen {
             glass.bounds.x += glass.velocity.x;
             glass.bounds.y += glass.velocity.y;
 
-            if (glass.bounds.y < groundY) {
-                glass.bounds.y = groundY;
+            if (glass.bounds.y < groundY + crates.get(0).bounds.height) { // Stop at crate height
+                glass.bounds.y = groundY + crates.get(0).bounds.height;
                 glass.velocity.y = 0;
             }
         }
