@@ -188,11 +188,17 @@ public class Level2GameScreen implements Screen {
                 currentBirdPosition.y = groundY;
                 birdVelocity.setZero();
 
-                // Switch to the next bird if the current bird has stopped moving
-                if (birdVelocity.len() < 0.01f) {
-                    if (currentBirdType == BirdType.RED) {
-                        currentBirdType = BirdType.YELLOW;
-                        isBirdLaunched = false; // Reset for the next bird
+                // Handle the yellow bird resetting for multiple shots
+                if (currentBirdType == BirdType.YELLOW) {
+                    if (birdVelocity.len() < 0.01f) {
+                        isBirdLaunched = false; // Allow for re-launch
+                        yellowBirdPosition.set(slingshotPosition.x - 50, slingshotPosition.y); // Reset position
+                    }
+                } else if (currentBirdType == BirdType.RED) {
+                    // Red bird can only be shot once
+                    if (birdVelocity.len() < 0.01f) {
+                        currentBirdType = BirdType.YELLOW; // Switch to yellow bird
+                        isBirdLaunched = false;
                     }
                 }
             }
@@ -216,6 +222,7 @@ public class Level2GameScreen implements Screen {
             birdVelocity.set(slingshotPosition.cpy().sub(currentBirdPosition).scl(0.1f * speedMultiplier));
         }
     }
+
 
     private void updateCrates() {
         for (Crate crate : crates) {
