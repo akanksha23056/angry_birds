@@ -85,14 +85,15 @@ public class Level2GameScreen implements Screen {
         this.birdVelocity = new Vector2(0, 0);
         this.isDragging = false;
 
-        // Initialize pigs
-        for (int i = 0; i < 3; i++) {
-            pigs.add(new Pig(new Rectangle(400 + i * 100, 150, 50, 50))); // X, Y, Width, Height
-        }
-
         // Initialize crates
         for (int i = 0; i < 3; i++) {
             crates.add(new Crate(new Rectangle(400 + i * 100, 100, 50, 50))); // X, Y, Width, Height
+        }
+
+        // Initialize pigs (positioned above crates)
+        for (int i = 0; i < crates.size(); i++) {
+            Crate crate = crates.get(i);
+            pigs.add(new Pig(new Rectangle(crate.bounds.x, crate.bounds.y + crate.bounds.height, 50, 50)));
         }
     }
 
@@ -186,7 +187,19 @@ public class Level2GameScreen implements Screen {
 
     private void updatePigs() {
         for (Pig pig : pigs) {
-            pig.velocity.add(gravity);
+            boolean isSupported = false;
+
+            for (Crate crate : crates) {
+                if (crate.bounds.overlaps(new Rectangle(pig.bounds.x, pig.bounds.y - 1, pig.bounds.width, 1))) {
+                    isSupported = true;
+                    break;
+                }
+            }
+
+            if (!isSupported) {
+                pig.velocity.add(gravity);
+            }
+
             pig.bounds.x += pig.velocity.x;
             pig.bounds.y += pig.velocity.y;
 
@@ -207,13 +220,6 @@ public class Level2GameScreen implements Screen {
         for (Crate crate : crates) {
             if (crate.bounds.contains(birdPosition.x, birdPosition.y)) {
                 crate.velocity.add(birdVelocity.cpy().scl(0.5f)); // Apply velocity to the crate
-            }
-
-            // Check for pig-crate collision
-            for (Pig pig : pigs) {
-                if (crate.bounds.overlaps(pig.bounds)) {
-                    pig.velocity.add(crate.velocity.cpy()); // Transfer crate velocity to pig
-                }
             }
         }
     }
