@@ -67,8 +67,8 @@ public class Level2GameScreen implements Screen {
     private final ArrayList<Pig> pigs = new ArrayList<>();
     private final ArrayList<Crate> crates = new ArrayList<>();
 
-    // Ground height
-    private final float groundY = 100;
+    // Ground height (matched with Level1GameScreen)
+    private final float groundY = 130;
 
     // Pause state
     private boolean isPaused = false;
@@ -90,17 +90,17 @@ public class Level2GameScreen implements Screen {
         // Pause Button
         this.pauseButtonBounds = new Rectangle(10, Gdx.graphics.getHeight() - 120, 100, 100);
 
-        // Slingshot position
-        this.slingshotPosition = new Vector2(100, 200);
+        // Slingshot position (aligned with Level1GameScreen)
+        this.slingshotPosition = new Vector2(200, groundY + 40);
 
-        // Bird properties
-        this.birdPosition = new Vector2(slingshotPosition.x, slingshotPosition.y);
+        // Bird properties (adjusted to be behind the sling)
+        this.birdPosition = new Vector2(slingshotPosition.x - 30, slingshotPosition.y);
         this.birdVelocity = new Vector2(0, 0);
         this.isDragging = false;
 
         // Initialize crates
         for (int i = 0; i < 3; i++) {
-            crates.add(new Crate(new Rectangle(400 + i * 100, 100, 50, 50))); // X, Y, Width, Height
+            crates.add(new Crate(new Rectangle(300 + i * 100, groundY, 50, 50))); // X, Y, Width, Height
         }
 
         // Initialize pigs (positioned above crates)
