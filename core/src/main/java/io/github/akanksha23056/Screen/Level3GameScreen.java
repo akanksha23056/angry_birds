@@ -22,6 +22,7 @@ public class Level3GameScreen implements Screen {
     private final Texture pigTexture;
     private final Texture pigHurtTexture;
     private final Texture crateTexture;
+    private final Texture glassTexture;
     private final Texture pauseButtonTexture;
     private final Texture pauseButtonHoverTexture;
 
@@ -41,7 +42,7 @@ public class Level3GameScreen implements Screen {
     private final Vector2 slingshotPosition;
     private final float slingshotRadius = 1.5f;
 
-    // Pigs and Crates
+    // Pigs, Crates, and Glass Slabs
     private static class Pig {
         Rectangle bounds;
         Vector2 velocity;
@@ -64,8 +65,19 @@ public class Level3GameScreen implements Screen {
         }
     }
 
+    private static class Glass {
+        Rectangle bounds;
+        Vector2 velocity;
+
+        Glass(Rectangle bounds) {
+            this.bounds = bounds;
+            this.velocity = new Vector2(0, 0);
+        }
+    }
+
     private final ArrayList<Pig> pigs = new ArrayList<>();
     private final ArrayList<Crate> crates = new ArrayList<>();
+    private final ArrayList<Glass> glassSlabs = new ArrayList<>();
 
     // Ground height (customizable for Level 3)
     private final float groundY = 100;
@@ -84,6 +96,7 @@ public class Level3GameScreen implements Screen {
         this.pigTexture = new Texture("pig.png");
         this.pigHurtTexture = new Texture("pighurt.png");
         this.crateTexture = new Texture("crate.png");
+        this.glassTexture = new Texture("glass.png");
         this.pauseButtonTexture = new Texture("pause.png");
         this.pauseButtonHoverTexture = new Texture("pause_hover.png");
 
@@ -103,10 +116,14 @@ public class Level3GameScreen implements Screen {
             crates.add(new Crate(new Rectangle(350 + i * 100, groundY, 50, 50))); // X, Y, Width, Height
         }
 
-        // Initialize pigs (positioned above crates)
-        for (int i = 0; i < crates.size(); i++) {
-            Crate crate = crates.get(i);
-            pigs.add(new Pig(new Rectangle(crate.bounds.x, crate.bounds.y + crate.bounds.height, 50, 50)));
+        // Initialize glass slabs (positioned above crates)
+        for (Crate crate : crates) {
+            glassSlabs.add(new Glass(new Rectangle(crate.bounds.x, crate.bounds.y + crate.bounds.height, 50, 20))); // Glass is thinner
+        }
+
+        // Initialize pigs (positioned above glass slabs)
+        for (Glass glass : glassSlabs) {
+            pigs.add(new Pig(new Rectangle(glass.bounds.x, glass.bounds.y + glass.bounds.height, 50, 50)));
         }
     }
 
@@ -129,6 +146,7 @@ public class Level3GameScreen implements Screen {
         // Update game mechanics
         updateBirdPosition();
         updateCrates();
+        updateGlassSlabs();
         updatePigs();
         checkCollisions();
 
@@ -155,10 +173,28 @@ public class Level3GameScreen implements Screen {
             batch.draw(crateTexture, crate.bounds.x, crate.bounds.y, crate.bounds.width, crate.bounds.height);
         }
 
+        // Draw glass slabs
+        for (Glass glass : glassSlabs) {
+            batch.draw(glassTexture, glass.bounds.x, glass.bounds.y, glass.bounds.width, glass.bounds.height);
+        }
+
         // Draw the pause button
         drawPauseButton();
 
         batch.end();
+    }
+
+    private void updateGlassSlabs() {
+        for (Glass glass : glassSlabs) {
+            glass.velocity.add(gravity);
+            glass.bounds.x += glass.velocity.x;
+            glass.bounds.y += glass.velocity.y;
+
+            if (glass.bounds.y < groundY) {
+                glass.bounds.y = groundY;
+                glass.velocity.y = 0;
+            }
+        }
     }
 
     private void updateBirdPosition() {
@@ -209,8 +245,8 @@ public class Level3GameScreen implements Screen {
         for (Pig pig : pigs) {
             boolean isSupported = false;
 
-            for (Crate crate : crates) {
-                if (crate.bounds.overlaps(new Rectangle(pig.bounds.x, pig.bounds.y - 1, pig.bounds.width, 1))) {
+            for (Glass glass : glassSlabs) {
+                if (glass.bounds.overlaps(new Rectangle(pig.bounds.x, pig.bounds.y - 1, pig.bounds.width, 1))) {
                     isSupported = true;
                     break;
                 }
@@ -242,6 +278,12 @@ public class Level3GameScreen implements Screen {
                 crate.velocity.add(birdVelocity.cpy().scl(0.5f)); // Apply velocity to the crate
             }
         }
+
+        for (Glass glass : glassSlabs) {
+            if (glass.bounds.contains(birdPosition.x, birdPosition.y)) {
+                glass.velocity.add(birdVelocity.cpy().scl(0.5f)); // Apply velocity to the glass
+            }
+        }
     }
 
     private void drawPauseButton() {
@@ -271,6 +313,7 @@ public class Level3GameScreen implements Screen {
         pigTexture.dispose();
         pigHurtTexture.dispose();
         crateTexture.dispose();
+        glassTexture.dispose();
         pauseButtonTexture.dispose();
         pauseButtonHoverTexture.dispose();
     }
