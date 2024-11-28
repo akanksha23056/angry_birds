@@ -47,12 +47,12 @@ public class PauseScreen implements Screen {
         // Draw buttons with hover effect and actions
         drawButton(replayBounds, replayButton, replayHoverButton, () -> {
             game.buttonClickSound.play();
-            game.setScreen(new Level1GameScreen(game, "levelgame.jpg")); // Transition to LevelGameScreen
+            game.setScreen(new Level1GameScreen(game, "level1game.jpg")); // Transition to LevelGameScreen
         });
 
         drawButton(playBounds, playButton, playHoverButton, () -> {
             game.buttonClickSound.play();
-            game.setScreen(new Level1GameScreen(game, "levelgame.jpg")); // Transition to LevelGameScreen
+            game.setScreen(new Level1GameScreen(game, "level1game.jpg")); // Transition to LevelGameScreen
         });
 
         drawButton(menuBounds, menuButton, menuHoverButton, () -> {
