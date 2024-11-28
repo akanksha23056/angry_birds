@@ -72,8 +72,8 @@ public class Level1GameScreen implements Screen {
     }
 
     private void initializeBird() {
-        float birdStartX = 50; // Starting X position for the bird
-        float birdStartY = 100; // Y position (below the catapult)
+        float birdStartX = 120; // Starting X position for the bird, near the sling
+        float birdStartY = 150; // Y position (near the catapult)
 
         // Create one bird
         currentBird = new Bird(world, "redbird.png", birdStartX, birdStartY, 0.1f);
@@ -238,6 +238,9 @@ public class Level1GameScreen implements Screen {
 
         // Handle Bird Launching Logic
         handleBirdLaunch();
+
+        // Check for collisions and update pig texture if hit
+        checkCollisions();
     }
 
     private void handleBirdLaunch() {
@@ -268,20 +271,31 @@ public class Level1GameScreen implements Screen {
 
         // Draw the pause button with hover effect
         if (isHovered) {
-            batch.draw(pauseButtonHoverTexture, pauseButtonBounds.x - 5.0F, pauseButtonBounds.y - 5.0F,
-                pauseButtonBounds.width + 10.0F, pauseButtonBounds.height + 10.0F);
+            batch.draw(pauseButtonHoverTexture, pauseButtonBounds.x - 2, pauseButtonBounds.y - 2, pauseButtonBounds.width + 4, pauseButtonBounds.height + 4);
             if (Gdx.input.isButtonJustPressed(0)) { // Check for left mouse button press
                 pauseGame();
             }
         } else {
-            batch.draw(pauseButtonTexture, pauseButtonBounds.x, pauseButtonBounds.y,
-                pauseButtonBounds.width, pauseButtonBounds.height);
+            batch.draw(pauseButtonTexture, pauseButtonBounds.x, pauseButtonBounds.y, pauseButtonBounds.width, pauseButtonBounds.height);
         }
     }
 
     private void pauseGame() {
         isPaused = true; // Set the game to paused state
         game.setScreen(new PauseScreen(game)); // Transition to PauseScreen
+    }
+
+    private void checkCollisions() {
+        for (Contact contact : world.getContactList()) {
+            Fixture fixtureA = contact.getFixtureA();
+            Fixture fixtureB = contact.getFixtureB();
+
+            if ((fixtureA.getBody().getUserData() instanceof Bird && fixtureB.getBody().getUserData() instanceof Pig) ||
+                (fixtureA.getBody().getUserData() instanceof Pig && fixtureB.getBody().getUserData() instanceof Bird)) {
+                Pig pig = (Pig) (fixtureA.getBody().getUserData() instanceof Pig ? fixtureA.getBody().getUserData() : fixtureB.getBody().getUserData());
+                pig.setTexture(new Texture("pighurt.png"));
+            }
+        }
     }
 
     @Override
@@ -315,7 +329,7 @@ public class Level1GameScreen implements Screen {
             float t = i * timeStep;
             float x = startX + velocity.x * t;
             float y = startY + velocity.y * t + 0.5f * gravity * t * t;
-            batch.draw(new Texture("trajectory.png"), x, y, 5, 5); // Draw trajectory points
+            batch.draw(new Texture("trajectory.png"), x, y, 5, 5); // Draw trajectory point
         }
     }
 }
