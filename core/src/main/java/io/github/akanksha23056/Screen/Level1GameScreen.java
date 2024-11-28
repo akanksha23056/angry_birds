@@ -6,198 +6,108 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.physics.box2d.*;
-import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.ScreenUtils;
-import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import io.github.akanksha23056.Main;
-import io.github.akanksha23056.Objects.Bird;
-import io.github.akanksha23056.Objects.Block;
-import io.github.akanksha23056.Objects.Catapult;
-import io.github.akanksha23056.Objects.Pig;
+
+import java.util.ArrayList;
 
 public class Level1GameScreen implements Screen {
     private final Main game;
     private final SpriteBatch batch;
+
+    // Textures
     private final Texture levelImage;
+    private final Texture slingshotTexture;
+    private final Texture birdTexture;
+    private final Texture pigTexture;
+    private final Texture pigHurtTexture;
+    private final Texture crateTexture;
     private final Texture pauseButtonTexture;
     private final Texture pauseButtonHoverTexture;
+
+    // Pause Button
     private final Rectangle pauseButtonBounds;
 
-    private final Stage stage;
-    private final Catapult catapult;
-    private Bird currentBird; // Single bird on the screen
-    private boolean isBirdLaunched; // Tracks if the current bird is launched
+    // Bird properties
+    private Vector2 birdPosition;
+    private Vector2 birdVelocity;
+    private boolean isDragging;
 
-    private World world;
-    private Box2DDebugRenderer debugRenderer;
+    // Gravity and damping
+    private final Vector2 gravity = new Vector2(0, -0.05f);
+    private final float damping = 0.98f;
 
-    private boolean isPaused; // Tracks if the game is paused
+    // Sling properties
+    private final Vector2 slingshotPosition;
+    private final float slingshotRadius = 1.5f;
 
-    private Body currentBirdBody; // Box2D body for the current bird
+    // Pigs and Crates
+    private static class Pig {
+        Rectangle bounds;
+        Vector2 velocity;
+        boolean isHurt;
 
-    public Level1GameScreen(Main game, String levelImagePath) {
+        Pig(Rectangle bounds) {
+            this.bounds = bounds;
+            this.velocity = new Vector2(0, 0);
+            this.isHurt = false;
+        }
+    }
+
+    private static class Crate {
+        Rectangle bounds;
+        Vector2 velocity;
+
+        Crate(Rectangle bounds) {
+            this.bounds = bounds;
+            this.velocity = new Vector2(0, 0);
+        }
+    }
+
+    private final ArrayList<Pig> pigs = new ArrayList<>();
+    private final ArrayList<Crate> crates = new ArrayList<>();
+
+    // Ground height
+    private final float groundY = 100;
+
+    // Pause state
+    private boolean isPaused = false;
+
+    // Try counter
+    private int tryCounter = 0;
+    private final int maxTries = 3;
+
+    public Level1GameScreen(Main game, String image) {
         this.game = game;
         this.batch = game.batch;
-        this.levelImage = new Texture(levelImagePath);
+
+        // Load textures
+        this.levelImage = new Texture("level2game.jpg");
+        this.slingshotTexture = new Texture("sling.png");
+        this.birdTexture = new Texture("redbird.png");
+        this.pigTexture = new Texture("pig.png");
+        this.pigHurtTexture = new Texture("pighurt.png");
+        this.crateTexture = new Texture("crate.png");
         this.pauseButtonTexture = new Texture("pause.png");
         this.pauseButtonHoverTexture = new Texture("pause_hover.png");
+
+        // Pause Button
         this.pauseButtonBounds = new Rectangle(10, Gdx.graphics.getHeight() - 120, 100, 100);
 
-        // Initialize Box2D World
-        world = new World(new Vector2(0, -9.8f), true); // Gravity points downward
-        debugRenderer = new Box2DDebugRenderer();
+        // Slingshot position
+        this.slingshotPosition = new Vector2(100, 200);
 
-        // Initialize Stage
-        this.stage = new Stage(new ScreenViewport(), batch);
-        Gdx.input.setInputProcessor(stage);
+        // Bird properties
+        this.birdPosition = new Vector2(slingshotPosition.x, slingshotPosition.y);
+        this.birdVelocity = new Vector2(0, 0);
+        this.isDragging = false;
 
-        // Initialize Catapult
-        this.catapult = new Catapult("sling.png", 100, 100);
-        stage.addActor(catapult);
+        // Initialize one crate
+        crates.add(new Crate(new Rectangle(400, 100, 50, 50))); // X, Y, Width, Height
 
-        // Initialize Bird
-        initializeBird();
-
-        // Initialize Blocks
-        initializeBlocks();
-
-        // Create screen boundaries
-        createScreenBoundaries();
-
-        // Create ground
-        createGround();
-
-        this.isPaused = false; // Initialize pause state as not paused
-    }
-
-    private void initializeBird() {
-        float birdStartX = 50; // Starting X position for the bird
-        float birdStartY = 100; // Y position (below the catapult)
-
-        // Create one bird
-        currentBird = new Bird(world, "redbird.png", birdStartX, birdStartY, 0.1f);
-        stage.addActor(currentBird);
-        setCurrentBird(currentBird);
-    }
-
-    private void setCurrentBird(Bird bird) {
-        currentBird = bird;
-        currentBird.setPosition(catapult.getX() + 20, catapult.getY() + 50); // Adjust bird position on catapult
-        isBirdLaunched = false;
-
-        // Remove any previous Box2D body if present
-        if (currentBirdBody != null) {
-            world.destroyBody(currentBirdBody);
-        }
-
-        // Initialize Box2D physics for the current bird
-        BodyDef birdBodyDef = new BodyDef();
-        birdBodyDef.type = BodyDef.BodyType.DynamicBody;
-        birdBodyDef.position.set(currentBird.getX() / 100, currentBird.getY() / 100);
-
-        PolygonShape birdShape = new PolygonShape();
-        birdShape.setAsBox(currentBird.getWidth() / 200, currentBird.getHeight() / 200);
-
-        FixtureDef birdFixtureDef = new FixtureDef();
-        birdFixtureDef.shape = birdShape;
-        birdFixtureDef.density = 1.0f;
-        birdFixtureDef.restitution = 0.5f; // Bounciness
-        birdFixtureDef.friction = 0.3f; // Friction
-
-        currentBirdBody = world.createBody(birdBodyDef);
-        currentBirdBody.createFixture(birdFixtureDef);
-
-        birdShape.dispose(); // Clean up shape after use
-
-        currentBird.reset(); // Reset bird physics and state
-    }
-
-    private void initializeBlocks() {
-        float scaleFactor = 0.1f; // 30% smaller than the previous 0.2f scale factor
-        float startX1 = Gdx.graphics.getWidth() - 200; // Start position for the first stack
-        float startX2 = Gdx.graphics.getWidth() - 100; // Start position for the second stack
-        float startY = 100; // Y position same as the bird and sling
-
-        // Add a pig on top of the second stack
-        Pig pig = new Pig(world, "pig.png", startX2, startY, scaleFactor);
-        stage.addActor(pig);
-
-        // Create first stack of two blocks
-        for (int i = 0; i < 2; i++) {
-            Block block = new Block(world, "crate.png", startX1, startY, scaleFactor);
-            stage.addActor(block);
-            startY -= block.getHeight() + 10; // Arrange blocks with a gap
-        }
-
-        // Reset startY for the second stack
-        startY = 100; // Y position same as the bird and sling
-
-        // Create second stack of two blocks
-        for (int i = 0; i < 2; i++) {
-            Block block = new Block(world, "crate.png", startX2, startY, scaleFactor);
-            stage.addActor(block);
-            startY -= block.getHeight() + 10; // Arrange blocks with a gap
-        }
-    }
-
-    private void createScreenBoundaries() {
-        float screenWidth = Gdx.graphics.getWidth() / 100f;
-        float screenHeight = Gdx.graphics.getHeight() / 100f;
-
-        // Create ground
-        BodyDef groundBodyDef = new BodyDef();
-        groundBodyDef.position.set(screenWidth / 2, 0);
-        Body groundBody = world.createBody(groundBodyDef);
-        EdgeShape groundShape = new EdgeShape();
-        groundShape.set(-screenWidth / 2, 0, screenWidth / 2, 0);
-        groundBody.createFixture(groundShape, 0);
-        groundShape.dispose();
-
-        // Create left wall
-        BodyDef leftWallBodyDef = new BodyDef();
-        leftWallBodyDef.position.set(0, screenHeight / 2);
-        Body leftWallBody = world.createBody(leftWallBodyDef);
-        EdgeShape leftWallShape = new EdgeShape();
-        leftWallShape.set(0, -screenHeight / 2, 0, screenHeight / 2);
-        leftWallBody.createFixture(leftWallShape, 0);
-        leftWallShape.dispose();
-
-        // Create right wall
-        BodyDef rightWallBodyDef = new BodyDef();
-        rightWallBodyDef.position.set(screenWidth, screenHeight / 2);
-        Body rightWallBody = world.createBody(rightWallBodyDef);
-        EdgeShape rightWallShape = new EdgeShape();
-        rightWallShape.set(0, -screenHeight / 2, 0, screenHeight / 2);
-        rightWallBody.createFixture(rightWallShape, 0);
-        rightWallShape.dispose();
-
-        // Create ceiling
-        BodyDef ceilingBodyDef = new BodyDef();
-        ceilingBodyDef.position.set(screenWidth / 2, screenHeight);
-        Body ceilingBody = world.createBody(ceilingBodyDef);
-        EdgeShape ceilingShape = new EdgeShape();
-        ceilingShape.set(-screenWidth / 2, 0, screenWidth / 2, 0);
-        ceilingBody.createFixture(ceilingShape, 0);
-        ceilingShape.dispose();
-    }
-
-    private void createGround() {
-        float groundWidth = Gdx.graphics.getWidth() / 100f;
-        float groundHeight = 1f; // Height of the ground
-
-        // Create ground body
-        BodyDef groundBodyDef = new BodyDef();
-        groundBodyDef.position.set(groundWidth / 2, groundHeight / 2);
-        Body groundBody = world.createBody(groundBodyDef);
-
-        // Create ground shape
-        PolygonShape groundShape = new PolygonShape();
-        groundShape.setAsBox(groundWidth / 2, groundHeight / 2);
-
-        // Attach shape to the ground body
-        groundBody.createFixture(groundShape, 0);
-        groundShape.dispose();
+        // Initialize one pig (positioned above the crate)
+        Crate crate = crates.get(0);
+        pigs.add(new Pig(new Rectangle(crate.bounds.x, crate.bounds.y + crate.bounds.height, 50, 50)));
     }
 
     @Override
@@ -209,68 +119,151 @@ public class Level1GameScreen implements Screen {
 
     @Override
     public void render(float delta) {
-        // Clear the screen
-        ScreenUtils.clear(0.15F, 0.15F, 0.2F, 1.0F);
-
-        // Update physics simulation
-        world.step(1 / 60f, 6, 2);
-
-        // Render the game background and UI
-        batch.begin();
-        batch.draw(levelImage, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-
-        // Draw the pause button at the end to ensure it is on top
-        drawPauseButton();
-
-        // Draw the trajectory if the bird is being dragged
-        if (currentBird != null && currentBird.isDragging()) {
-            drawTrajectory(currentBird.getX(), currentBird.getY(), new Vector2(10, 10)); // Example velocity
+        if (isPaused) {
+            return; // Skip rendering while paused
         }
 
+        // Clear screen
+        ScreenUtils.clear(0.2f, 0.2f, 0.2f, 1.0f);
+
+        // Update game mechanics
+        updateBirdPosition();
+        updateCrates();
+        updatePigs();
+        checkCollisions();
+
+        // Draw everything
+        batch.begin();
+
+        // Draw background
+        batch.draw(levelImage, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+
+        // Draw slingshot
+        batch.draw(slingshotTexture, slingshotPosition.x - 25, slingshotPosition.y - 50, 50, 100);
+
+        // Draw bird
+        batch.draw(birdTexture, birdPosition.x - 25, birdPosition.y - 25, 50, 50);
+
+        // Draw pigs
+        for (Pig pig : pigs) {
+            Texture textureToDraw = pig.isHurt ? pigHurtTexture : pigTexture;
+            batch.draw(textureToDraw, pig.bounds.x, pig.bounds.y, pig.bounds.width, pig.bounds.height);
+        }
+
+        // Draw crates
+        for (Crate crate : crates) {
+            batch.draw(crateTexture, crate.bounds.x, crate.bounds.y, crate.bounds.width, crate.bounds.height);
+        }
+
+        // Draw the pause button
+        drawPauseButton();
+
         batch.end();
-
-        // Draw Box2D debug shapes (optional, for visualization)
-        debugRenderer.render(world, stage.getCamera().combined);
-
-        // Render stage (actors, including birds and catapult)
-        stage.act(delta);
-        stage.draw();
-
-        // Handle Bird Launching Logic
-        handleBirdLaunch();
     }
 
-    private void handleBirdLaunch() {
-        if (currentBird != null && !isBirdLaunched) {
-            if (Gdx.input.isButtonJustPressed(0)) { // Left mouse button press to simulate launch
-                Vector2 launchVelocity = calculateLaunchVelocity(); // Calculate launch velocity
-                launchBird(launchVelocity); // Launch the bird
-                isBirdLaunched = true;
+    private void updateBirdPosition() {
+        if (Gdx.input.isTouched()) {
+            Vector2 touchPosition = new Vector2(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
+
+            if (isDragging || touchPosition.dst(slingshotPosition) <= slingshotRadius * 100) {
+                isDragging = true;
+
+                if (touchPosition.dst(slingshotPosition) > slingshotRadius * 100) {
+                    birdPosition.set(slingshotPosition.cpy().add(touchPosition.sub(slingshotPosition).nor().scl(slingshotRadius * 100)));
+                } else {
+                    birdPosition.set(touchPosition);
+                }
+            }
+        } else if (isDragging) {
+            isDragging = false;
+            tryCounter++; // Increment try counter
+
+            birdVelocity.set(slingshotPosition.cpy().sub(birdPosition).scl(0.1f));
+        }
+
+        if (!isDragging) {
+            birdVelocity.add(gravity);
+            birdVelocity.scl(damping);
+            birdPosition.add(birdVelocity);
+
+            if (birdPosition.y < groundY) {
+                birdPosition.y = groundY;
+                birdVelocity.setZero();
+            }
+        }
+
+        // Check if max tries exceeded
+        if (tryCounter >= maxTries) {
+            game.setScreen(new LoseScreen(game));
+        }
+    }
+
+    private void updateCrates() {
+        for (Crate crate : crates) {
+            crate.velocity.add(gravity);
+            crate.bounds.x += crate.velocity.x;
+            crate.bounds.y += crate.velocity.y;
+
+            if (crate.bounds.y < groundY) {
+                crate.bounds.y = groundY;
+                crate.velocity.y = 0;
             }
         }
     }
 
-    private Vector2 calculateLaunchVelocity() {
-        float dragDistanceX = currentBird.getX() - catapult.getX();
-        float dragDistanceY = currentBird.getY() - catapult.getY();
-        float launchSpeed = 10f; // Adjust this value to control the launch speed
-        return new Vector2(dragDistanceX * launchSpeed, dragDistanceY * launchSpeed);
+    private void updatePigs() {
+        for (Pig pig : pigs) {
+            boolean isSupported = false;
+
+            for (Crate crate : crates) {
+                if (crate.bounds.overlaps(new Rectangle(pig.bounds.x, pig.bounds.y - 1, pig.bounds.width, 1))) {
+                    isSupported = true;
+                    break;
+                }
+            }
+
+            if (!isSupported) {
+                pig.velocity.add(gravity);
+            }
+
+            pig.bounds.x += pig.velocity.x;
+            pig.bounds.y += pig.velocity.y;
+
+            if (pig.bounds.y < groundY) {
+                pig.bounds.y = groundY;
+                pig.velocity.y = 0;
+            }
+        }
     }
 
-    private void launchBird(Vector2 velocity) {
-        if (currentBirdBody != null) {
-            currentBirdBody.setLinearVelocity(velocity); // Set the velocity for the bird's movement
+    private void checkCollisions() {
+        for (Pig pig : pigs) {
+            if (!pig.isHurt && pig.bounds.contains(birdPosition.x, birdPosition.y)) {
+                pig.isHurt = true; // Change texture to hurt
+                unlockLevel2AndRedirect();
+            }
         }
+
+        for (Crate crate : crates) {
+            if (crate.bounds.contains(birdPosition.x, birdPosition.y)) {
+                crate.velocity.add(birdVelocity.cpy().scl(0.5f)); // Apply velocity to the crate
+            }
+        }
+    }
+
+    private void unlockLevel2AndRedirect() {
+        // Unlock level 2
+
+        // Redirect to win screen
+        game.setScreen(new WinScreen(game));
     }
 
     private void drawPauseButton() {
         boolean isHovered = pauseButtonBounds.contains(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
-
-        // Draw the pause button with hover effect
         if (isHovered) {
-            batch.draw(pauseButtonHoverTexture, pauseButtonBounds.x - 5.0F, pauseButtonBounds.y - 5.0F,
-                pauseButtonBounds.width + 10.0F, pauseButtonBounds.height + 10.0F);
-            if (Gdx.input.isButtonJustPressed(0)) { // Check for left mouse button press
+            batch.draw(pauseButtonHoverTexture, pauseButtonBounds.x - 5, pauseButtonBounds.y - 5,
+                pauseButtonBounds.width + 10, pauseButtonBounds.height + 10);
+            if (Gdx.input.isButtonJustPressed(0)) {
                 pauseGame();
             }
         } else {
@@ -280,23 +273,22 @@ public class Level1GameScreen implements Screen {
     }
 
     private void pauseGame() {
-        game.setScreen(new PauseScreen(game, this)); // Pass the current screen as a reference
+        game.setScreen(new PauseScreen(game, this));
+        // Transition to pause menu
     }
-
 
     @Override
     public void dispose() {
         levelImage.dispose();
+        slingshotTexture.dispose();
+        birdTexture.dispose();
+        pigTexture.dispose();
+        pigHurtTexture.dispose();
+        crateTexture.dispose();
         pauseButtonTexture.dispose();
         pauseButtonHoverTexture.dispose();
-        stage.dispose();
-        world.dispose();
-        debugRenderer.dispose();
-        currentBird.dispose();
-        catapult.dispose();
     }
 
-    // Empty lifecycle methods
     @Override
     public void resize(int width, int height) {}
     @Override
@@ -305,17 +297,4 @@ public class Level1GameScreen implements Screen {
     public void resume() {}
     @Override
     public void hide() {}
-
-    private void drawTrajectory(float startX, float startY, Vector2 velocity) {
-        float timeStep = 0.1f; // Time step for calculating trajectory points
-        int numPoints = 30; // Number of points to draw
-        float gravity = -9.8f; // Gravity value
-
-        for (int i = 0; i < numPoints; i++) {
-            float t = i * timeStep;
-            float x = startX + velocity.x * t;
-            float y = startY + velocity.y * t + 0.5f * gravity * t * t;
-            batch.draw(new Texture("trajectory.png"), x, y, 5, 5); // Draw trajectory points
-        }
-    }
 }

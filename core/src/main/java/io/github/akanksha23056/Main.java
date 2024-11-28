@@ -7,6 +7,7 @@ import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import io.github.akanksha23056.Screen.GameScreen;
 import io.github.akanksha23056.Screen.HomeScreen;
+import io.github.akanksha23056.Screen.LevelsScreen;
 
 public class Main extends Game {
     public SpriteBatch batch;
@@ -14,7 +15,9 @@ public class Main extends Game {
     public Sound buttonClickSound;
     public boolean musicMuted = false;
     public boolean volumeMuted = false; // Track button click sound state
-//hhhhh
+    public boolean[] unlockedLevels;
+    private LevelsScreen levelsScreen;
+
     public Main() {}
 
     public void create() {
@@ -24,6 +27,9 @@ public class Main extends Game {
         this.backgroundMusic.setVolume(0.5f);
 
         this.buttonClickSound = Gdx.audio.newSound(Gdx.files.internal("buttons.mp3"));
+
+        // Initialize LevelsScreen
+        this.levelsScreen = new LevelsScreen(this);
 
         // Set the initial screen to GameScreen
         this.setScreen(new GameScreen(this));
@@ -42,6 +48,10 @@ public class Main extends Game {
                 }
             });
         }).start();
+    }
+
+    public LevelsScreen getLevelsScreen() {
+        return levelsScreen;
     }
 
     public void muteMusic() {
