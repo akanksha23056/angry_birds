@@ -21,6 +21,7 @@ public class Level2GameScreen implements Screen {
     private final Texture slingshotTexture;
     private final Texture birdTexture;
     private final Texture pigTexture;
+    private final Texture pigHurtTexture; // New texture for hurt pig
     private final Texture crateTexture;
 
     // Bird properties
