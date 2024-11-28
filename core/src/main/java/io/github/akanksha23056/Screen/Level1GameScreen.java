@@ -315,7 +315,7 @@ public class Level1GameScreen implements Screen {
             float t = i * timeStep;
             float x = startX + velocity.x * t;
             float y = startY + velocity.y * t + 0.5f * gravity * t * t;
-            batch.draw(new Texture("trajectory.png"), x, y, 5, 5); // Draw trajectory point
+            batch.draw(new Texture("trajectory.png"), x, y, 5, 5); // Draw trajectory points
         }
     }
 }
