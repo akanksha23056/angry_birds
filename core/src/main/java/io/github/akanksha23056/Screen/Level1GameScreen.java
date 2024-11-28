@@ -280,9 +280,9 @@ public class Level1GameScreen implements Screen {
     }
 
     private void pauseGame() {
-        isPaused = true; // Set the game to paused state
-        game.setScreen(new PauseScreen(game)); // Transition to PauseScreen
+        game.setScreen(new PauseScreen(game, this)); // Pass the current screen as a reference
     }
+
 
     @Override
     public void dispose() {

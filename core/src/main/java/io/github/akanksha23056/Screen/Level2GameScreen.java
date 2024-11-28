@@ -259,8 +259,8 @@ public class Level2GameScreen implements Screen {
     }
 
     private void pauseGame() {
-        isPaused = true; // Pause the game logic
-        game.setScreen(new PauseScreen(game)); // Transition to pause menu
+        game.setScreen(new PauseScreen(game, this));
+        // Transition to pause menu
     }
 
     @Override
