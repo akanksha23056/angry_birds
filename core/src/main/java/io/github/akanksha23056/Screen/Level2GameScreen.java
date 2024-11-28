@@ -22,6 +22,11 @@ public class Level2GameScreen implements Screen {
     private final Texture pigTexture;
     private final Texture pigHurtTexture;
     private final Texture crateTexture;
+    private final Texture pauseButtonTexture;
+    private final Texture pauseButtonHoverTexture;
+
+    // Pause Button
+    private final Rectangle pauseButtonBounds;
 
     // Bird properties
     private Vector2 birdPosition;
@@ -65,6 +70,9 @@ public class Level2GameScreen implements Screen {
     // Ground height
     private final float groundY = 100;
 
+    // Pause state
+    private boolean isPaused = false;
+
     public Level2GameScreen(Main game) {
         this.game = game;
         this.batch = game.batch;
@@ -76,6 +84,11 @@ public class Level2GameScreen implements Screen {
         this.pigTexture = new Texture("pig.png");
         this.pigHurtTexture = new Texture("pighurt.png");
         this.crateTexture = new Texture("crate.png");
+        this.pauseButtonTexture = new Texture("pause.png");
+        this.pauseButtonHoverTexture = new Texture("pause_hover.png");
+
+        // Pause Button
+        this.pauseButtonBounds = new Rectangle(10, Gdx.graphics.getHeight() - 120, 100, 100);
 
         // Slingshot position
         this.slingshotPosition = new Vector2(100, 200);
@@ -106,6 +119,10 @@ public class Level2GameScreen implements Screen {
 
     @Override
     public void render(float delta) {
+        if (isPaused) {
+            return; // Skip rendering while paused
+        }
+
         // Clear screen
         ScreenUtils.clear(0.2f, 0.2f, 0.2f, 1.0f);
 
@@ -137,6 +154,9 @@ public class Level2GameScreen implements Screen {
         for (Crate crate : crates) {
             batch.draw(crateTexture, crate.bounds.x, crate.bounds.y, crate.bounds.width, crate.bounds.height);
         }
+
+        // Draw the pause button
+        drawPauseButton();
 
         batch.end();
     }
@@ -224,6 +244,25 @@ public class Level2GameScreen implements Screen {
         }
     }
 
+    private void drawPauseButton() {
+        boolean isHovered = pauseButtonBounds.contains(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
+        if (isHovered) {
+            batch.draw(pauseButtonHoverTexture, pauseButtonBounds.x - 5, pauseButtonBounds.y - 5,
+                pauseButtonBounds.width + 10, pauseButtonBounds.height + 10);
+            if (Gdx.input.isButtonJustPressed(0)) {
+                pauseGame();
+            }
+        } else {
+            batch.draw(pauseButtonTexture, pauseButtonBounds.x, pauseButtonBounds.y,
+                pauseButtonBounds.width, pauseButtonBounds.height);
+        }
+    }
+
+    private void pauseGame() {
+        isPaused = true; // Pause the game logic
+        game.setScreen(new PauseScreen(game)); // Transition to pause menu
+    }
+
     @Override
     public void dispose() {
         levelImage.dispose();
@@ -232,6 +271,8 @@ public class Level2GameScreen implements Screen {
         pigTexture.dispose();
         pigHurtTexture.dispose();
         crateTexture.dispose();
+        pauseButtonTexture.dispose();
+        pauseButtonHoverTexture.dispose();
     }
 
     @Override
