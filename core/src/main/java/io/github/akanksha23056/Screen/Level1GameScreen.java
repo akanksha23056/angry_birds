@@ -67,8 +67,8 @@ public class Level1GameScreen implements Screen {
     private final ArrayList<Pig> pigs = new ArrayList<>();
     private final ArrayList<Crate> crates = new ArrayList<>();
 
-    // Ground height
-    private final float groundY = 100;
+    // Ground height (lowered slightly)
+    private final float groundY = 130;
 
     // Pause state
     private boolean isPaused = false;
@@ -94,19 +94,24 @@ public class Level1GameScreen implements Screen {
         // Pause Button
         this.pauseButtonBounds = new Rectangle(10, Gdx.graphics.getHeight() - 120, 100, 100);
 
-        // Slingshot position
-        this.slingshotPosition = new Vector2(100, 200);
+        // Slingshot position (lowered slightly)
+        this.slingshotPosition = new Vector2(200, groundY + 40);
 
-        // Bird properties
-        this.birdPosition = new Vector2(slingshotPosition.x, slingshotPosition.y);
+        // Bird properties (adjusted to be behind the lowered sling)
+        this.birdPosition = new Vector2(slingshotPosition.x - 30, slingshotPosition.y);
         this.birdVelocity = new Vector2(0, 0);
         this.isDragging = false;
 
+        // Initialize one crate (lowered slightly)
         // Initialize one crate
-        crates.add(new Crate(new Rectangle(400, 100, 50, 50))); // X, Y, Width, Height
+        Crate crate = new Crate(new Rectangle(400, groundY, 50, 50)); // Place crate slightly higher
+        crates.add(crate);
 
-        // Initialize one pig (positioned above the crate)
-        Crate crate = crates.get(0);
+// Initialize one pig (placed above the crate)
+        pigs.add(new Pig(new Rectangle(crate.bounds.x, crate.bounds.y + crate.bounds.height, 50, 50)));
+        // X, Y, Width, Height
+
+        // Initialize one pig (positioned above the lowered crate)
         pigs.add(new Pig(new Rectangle(crate.bounds.x, crate.bounds.y + crate.bounds.height, 50, 50)));
     }
 
@@ -204,7 +209,7 @@ public class Level1GameScreen implements Screen {
             crate.bounds.x += crate.velocity.x;
             crate.bounds.y += crate.velocity.y;
 
-            if (crate.bounds.y < groundY) {
+            if (crate.bounds.y < groundY) { // Match the raised position
                 crate.bounds.y = groundY;
                 crate.velocity.y = 0;
             }
@@ -216,6 +221,7 @@ public class Level1GameScreen implements Screen {
             boolean isSupported = false;
 
             for (Crate crate : crates) {
+                // Check if the pig is directly above a crate
                 if (crate.bounds.overlaps(new Rectangle(pig.bounds.x, pig.bounds.y - 1, pig.bounds.width, 1))) {
                     isSupported = true;
                     break;
@@ -223,18 +229,20 @@ public class Level1GameScreen implements Screen {
             }
 
             if (!isSupported) {
-                pig.velocity.add(gravity);
+                pig.velocity.add(gravity); // Apply gravity if not supported
             }
 
-            pig.bounds.x += pig.velocity.x;
-            pig.bounds.y += pig.velocity.y;
+            pig.bounds.x += pig.velocity.x; // Update horizontal movement
+            pig.bounds.y += pig.velocity.y; // Update vertical movement
 
+            // Check if pig has reached the ground
             if (pig.bounds.y < groundY) {
                 pig.bounds.y = groundY;
-                pig.velocity.y = 0;
+                pig.velocity.y = 0; // Stop vertical movement
             }
         }
     }
+
 
     private void checkCollisions() {
         for (Pig pig : pigs) {
@@ -253,7 +261,7 @@ public class Level1GameScreen implements Screen {
 
     private void unlockLevel2AndRedirect() {
         // Unlock level 2
-        game.unlockedLevels[1] = true;
+
         // Redirect to win screen
         game.setScreen(new WinScreen(game));
     }
