@@ -9,7 +9,7 @@ public class Catapult extends Actor {
 
     public Catapult(String texturePath, float x, float y) {
         this.texture = new Texture(texturePath);
-        setBounds(x, y, 150, 150); // Adjust size as needed
+        setBounds(x, y, 170, 170); // Adjust size as needed
     }
 
     @Override
