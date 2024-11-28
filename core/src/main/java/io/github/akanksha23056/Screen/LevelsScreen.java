@@ -1,3 +1,4 @@
+// LevelsScreen.java
 package io.github.akanksha23056.Screen;
 
 import com.badlogic.gdx.Gdx;
@@ -26,8 +27,6 @@ public class LevelsScreen implements Screen {
     private final Rectangle level2Bounds;
     private final Rectangle level3Bounds;
     private final Rectangle backButtonBounds;
-
-    private final boolean[] unlockedLevels;
 
     public LevelsScreen(Main game) {
         this.game = game;
@@ -62,9 +61,6 @@ public class LevelsScreen implements Screen {
             buttonWidth, buttonHeight
         );
         this.backButtonBounds = new Rectangle(10.0F, Gdx.graphics.getHeight() - 10 - 100, 100.0F, 100.0F);
-
-        // Initialize level unlock state (only level 1 is unlocked initially)
-        this.unlockedLevels = new boolean[]{true, false, false};
     }
 
     public void show() {
@@ -81,12 +77,12 @@ public class LevelsScreen implements Screen {
         // Render buttons with lock/unlock state
         renderLevelButton(level1Bounds, level1Texture, level1HoverTexture, 0, () -> {
             game.setScreen(new Level1GameScreen(game, "level1game.png"));
-            unlockNextLevel(1); // Unlock level 2
+            game.unlockLevel(1); // Unlock level 2
         });
 
         renderLevelButton(level2Bounds, level2Texture, level2HoverTexture, 1, () -> {
             game.setScreen(new Level2GameScreen(game));
-            unlockNextLevel(2); // Unlock level 3
+            game.unlockLevel(2); // Unlock level 3
         });
 
         renderLevelButton(level3Bounds, level3Texture, level3HoverTexture, 2, () -> {
@@ -100,7 +96,7 @@ public class LevelsScreen implements Screen {
     }
 
     private void renderLevelButton(Rectangle bounds, Texture normalTexture, Texture hoverTexture, int levelIndex, Runnable onClick) {
-        if (!unlockedLevels[levelIndex]) {
+        if (!game.unlockedLevels[levelIndex]) {
             // Draw locked state
             batch.draw(lockTexture, bounds.x, bounds.y, bounds.width, bounds.height);
         } else {
@@ -116,12 +112,6 @@ public class LevelsScreen implements Screen {
         }
     }
 
-    public void unlockNextLevel(int levelIndex) {
-        if (levelIndex < unlockedLevels.length) {
-            unlockedLevels[levelIndex] = true;
-        }
-    }
-
     private void handleBackButton() {
         if (backButtonBounds.contains(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY())) {
             batch.draw(backButtonHoverTexture, backButtonBounds.x - 5.0F, backButtonBounds.y - 5.0F, backButtonBounds.width + 30.0F, backButtonBounds.height + 30.0F);
@@ -132,7 +122,6 @@ public class LevelsScreen implements Screen {
             batch.draw(backButtonTexture, backButtonBounds.x, backButtonBounds.y, backButtonBounds.width, backButtonBounds.height);
         }
     }
-
 
     public void resize(int width, int height) { }
 

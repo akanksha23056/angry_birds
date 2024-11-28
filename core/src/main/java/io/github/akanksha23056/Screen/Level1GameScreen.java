@@ -253,7 +253,7 @@ public class Level1GameScreen implements Screen {
 
     private void unlockLevel2AndRedirect() {
         // Unlock level 2
-
+        game.unlockedLevels[1] = true;
         // Redirect to win screen
         game.setScreen(new WinScreen(game));
     }

@@ -24,7 +24,7 @@ public class LoseScreen implements Screen {
         this.retryButtonHoverTexture = new Texture("replay_hover.png");
 
         // Set button bounds
-        float buttonWidth = 200f, buttonHeight = 80f;
+        float buttonWidth = 180f, buttonHeight = 180f;
         float centerX = (Gdx.graphics.getWidth() - buttonWidth) / 2;
         float lowerY = Gdx.graphics.getHeight() / 4;
 

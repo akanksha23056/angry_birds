@@ -1,3 +1,4 @@
+// Main.java
 package io.github.akanksha23056;
 
 import com.badlogic.gdx.Gdx;
@@ -28,6 +29,9 @@ public class Main extends Game {
 
         this.buttonClickSound = Gdx.audio.newSound(Gdx.files.internal("buttons.mp3"));
 
+        // Initialize unlocked levels (only level 1 is unlocked initially)
+        this.unlockedLevels = new boolean[]{true, false, false};
+
         // Initialize LevelsScreen
         this.levelsScreen = new LevelsScreen(this);
 
@@ -52,6 +56,12 @@ public class Main extends Game {
 
     public LevelsScreen getLevelsScreen() {
         return levelsScreen;
+    }
+
+    public void unlockLevel(int levelIndex) {
+        if (levelIndex < unlockedLevels.length) {
+            unlockedLevels[levelIndex] = true;
+        }
     }
 
     public void muteMusic() {
