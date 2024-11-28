@@ -18,7 +18,8 @@ public class Level2GameScreen implements Screen {
     // Textures
     private final Texture levelImage;
     private final Texture slingshotTexture;
-    private final Texture birdTexture;
+    private final Texture redBirdTexture;
+    private final Texture yellowBirdTexture;
     private final Texture pigTexture;
     private final Texture pigHurtTexture;
     private final Texture crateTexture;
@@ -29,9 +30,14 @@ public class Level2GameScreen implements Screen {
     private final Rectangle pauseButtonBounds;
 
     // Bird properties
-    private Vector2 birdPosition;
+    private enum BirdType { RED, YELLOW }
+
+    private BirdType currentBirdType = BirdType.RED;
+    private Vector2 redBirdPosition;
+    private Vector2 yellowBirdPosition;
     private Vector2 birdVelocity;
     private boolean isDragging;
+    private boolean isBirdLaunched = false; // New flag to track launch state
 
     // Gravity and damping
     private final Vector2 gravity = new Vector2(0, -0.05f);
@@ -80,7 +86,8 @@ public class Level2GameScreen implements Screen {
         // Load textures
         this.levelImage = new Texture("level2game.jpg");
         this.slingshotTexture = new Texture("sling.png");
-        this.birdTexture = new Texture("redbird.png");
+        this.redBirdTexture = new Texture("redbird.png");
+        this.yellowBirdTexture = new Texture("yellowbird.png");
         this.pigTexture = new Texture("pig.png");
         this.pigHurtTexture = new Texture("pighurt.png");
         this.crateTexture = new Texture("crate.png");
@@ -93,8 +100,9 @@ public class Level2GameScreen implements Screen {
         // Slingshot position (aligned with Level1GameScreen)
         this.slingshotPosition = new Vector2(200, groundY + 40);
 
-        // Bird properties (adjusted to be behind the sling)
-        this.birdPosition = new Vector2(slingshotPosition.x - 30, slingshotPosition.y);
+        // Bird positions
+        this.redBirdPosition = new Vector2(slingshotPosition.x - 30, slingshotPosition.y);
+        this.yellowBirdPosition = new Vector2(slingshotPosition.x - 50, slingshotPosition.y); // Behind the slingshot
         this.birdVelocity = new Vector2(0, 0);
         this.isDragging = false;
 
@@ -141,8 +149,13 @@ public class Level2GameScreen implements Screen {
         // Draw slingshot
         batch.draw(slingshotTexture, slingshotPosition.x - 25, slingshotPosition.y - 50, 50, 100);
 
-        // Draw bird
-        batch.draw(birdTexture, birdPosition.x - 25, birdPosition.y - 25, 50, 50);
+        // Draw birds
+        if (!isBirdLaunched || currentBirdType == BirdType.RED) {
+            batch.draw(redBirdTexture, redBirdPosition.x - 25, redBirdPosition.y - 25, 50, 50);
+        }
+        if (currentBirdType == BirdType.YELLOW) {
+            batch.draw(yellowBirdTexture, yellowBirdPosition.x - 25, yellowBirdPosition.y - 25, 50, 50);
+        }
 
         // Draw pigs
         for (Pig pig : pigs) {
@@ -162,33 +175,45 @@ public class Level2GameScreen implements Screen {
     }
 
     private void updateBirdPosition() {
-        if (Gdx.input.isTouched()) {
+        Vector2 currentBirdPosition = currentBirdType == BirdType.RED ? redBirdPosition : yellowBirdPosition;
+        float speedMultiplier = currentBirdType == BirdType.YELLOW ? 2.0f : 1.0f; // Yellow bird has higher speed
+
+        if (isBirdLaunched) {
+            // Handle launched bird physics
+            birdVelocity.add(gravity);
+            birdVelocity.scl(damping);
+            currentBirdPosition.add(birdVelocity);
+
+            if (currentBirdPosition.y <= groundY) {
+                currentBirdPosition.y = groundY;
+                birdVelocity.setZero();
+
+                // Switch to the next bird if the current bird has stopped moving
+                if (birdVelocity.len() < 0.01f) {
+                    if (currentBirdType == BirdType.RED) {
+                        currentBirdType = BirdType.YELLOW;
+                        isBirdLaunched = false; // Reset for the next bird
+                    }
+                }
+            }
+        } else if (Gdx.input.isTouched()) {
+            // Dragging logic
             Vector2 touchPosition = new Vector2(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
 
             if (isDragging || touchPosition.dst(slingshotPosition) <= slingshotRadius * 100) {
                 isDragging = true;
 
                 if (touchPosition.dst(slingshotPosition) > slingshotRadius * 100) {
-                    birdPosition.set(slingshotPosition.cpy().add(touchPosition.sub(slingshotPosition).nor().scl(slingshotRadius * 100)));
+                    currentBirdPosition.set(slingshotPosition.cpy().add(touchPosition.sub(slingshotPosition).nor().scl(slingshotRadius * 100)));
                 } else {
-                    birdPosition.set(touchPosition);
+                    currentBirdPosition.set(touchPosition);
                 }
             }
         } else if (isDragging) {
+            // Launch bird on release
             isDragging = false;
-
-            birdVelocity.set(slingshotPosition.cpy().sub(birdPosition).scl(0.1f));
-        }
-
-        if (!isDragging) {
-            birdVelocity.add(gravity);
-            birdVelocity.scl(damping);
-            birdPosition.add(birdVelocity);
-
-            if (birdPosition.y < groundY) {
-                birdPosition.y = groundY;
-                birdVelocity.setZero();
-            }
+            isBirdLaunched = true;
+            birdVelocity.set(slingshotPosition.cpy().sub(currentBirdPosition).scl(0.1f * speedMultiplier));
         }
     }
 
@@ -231,18 +256,24 @@ public class Level2GameScreen implements Screen {
     }
 
     private void checkCollisions() {
+        // Determine current bird's position based on its type
+        Vector2 currentBirdPosition = currentBirdType == BirdType.RED ? redBirdPosition : yellowBirdPosition;
+
+        // Check collisions with pigs
         for (Pig pig : pigs) {
-            if (!pig.isHurt && pig.bounds.contains(birdPosition.x, birdPosition.y)) {
-                pig.isHurt = true; // Change texture to hurt
+            if (!pig.isHurt && currentBirdPosition.dst(pig.bounds.x + 25, pig.bounds.y + 25) < 25) {
+                pig.isHurt = true; // Mark the pig as hurt
             }
         }
 
+        // Check collisions with crates
         for (Crate crate : crates) {
-            if (crate.bounds.contains(birdPosition.x, birdPosition.y)) {
+            if (currentBirdPosition.dst(crate.bounds.x + 25, crate.bounds.y + 25) < 25) {
                 crate.velocity.add(birdVelocity.cpy().scl(0.5f)); // Apply velocity to the crate
             }
         }
     }
+
 
     private void drawPauseButton() {
         boolean isHovered = pauseButtonBounds.contains(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
@@ -260,14 +291,14 @@ public class Level2GameScreen implements Screen {
 
     private void pauseGame() {
         game.setScreen(new PauseScreen(game, this));
-        // Transition to pause menu
     }
 
     @Override
     public void dispose() {
         levelImage.dispose();
         slingshotTexture.dispose();
-        birdTexture.dispose();
+        redBirdTexture.dispose();
+        yellowBirdTexture.dispose();
         pigTexture.dispose();
         pigHurtTexture.dispose();
         crateTexture.dispose();
