@@ -149,6 +149,19 @@ public class Level3GameScreen implements Screen {
         }
     }
 
+    private void checkWinCondition() {
+        boolean allPigsHit = true;
+        for (Pig pig : pigs) {
+            if (!pig.isHurt) {
+                allPigsHit = false;
+                break;
+            }
+        }
+        if (allPigsHit) {
+            game.setScreen(new WinScreen(game, 3)); // Redirect to WinScreen for Level 3
+        }
+    }
+
     @Override
     public void render(float delta) {
         if (isPaused) return;
@@ -162,6 +175,9 @@ public class Level3GameScreen implements Screen {
         updateGlassSlabs();
         updatePigs();
         checkCollisions();
+
+        // Check win condition
+        checkWinCondition();
 
         // Draw everything
         batch.begin();
@@ -449,18 +465,7 @@ public class Level3GameScreen implements Screen {
             }
         }
     }
-    private void checkWinCondition() {
-        boolean allPigsHit = true;
-        for (Level3GameScreen.Pig pig : pigs) {
-            if (!pig.isHurt) {
-                allPigsHit = false;
-                break;
-            }
-        }
-        if (allPigsHit) {
-            game.setScreen(new WinScreen(game, 3)); // Redirect to WinScreen for Level 3
-        }
-    }
+
     private void checkGameOver() {
         boolean allPigsHit = true;
         for (Level3GameScreen.Pig pig : pigs) {
