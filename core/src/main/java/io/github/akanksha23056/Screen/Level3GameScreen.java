@@ -202,15 +202,19 @@ public class Level3GameScreen implements Screen {
 
     private void updateBirdPosition() {
         Vector2 currentBirdPosition;
+        float speedMultiplier;
         switch (currentBirdType) {
             case RED:
                 currentBirdPosition = redBirdPosition;
+                speedMultiplier = 1.0f; // Normal speed for red bird
                 break;
             case YELLOW:
                 currentBirdPosition = yellowBirdPosition;
+                speedMultiplier = 1.5f; // Faster speed for yellow bird
                 break;
             case BLACK:
                 currentBirdPosition = blackBirdPosition;
+                speedMultiplier = 1.5f; // Same speed as yellow bird
                 break;
             default:
                 throw new IllegalStateException("Unexpected value: " + currentBirdType);
@@ -251,9 +255,10 @@ public class Level3GameScreen implements Screen {
         } else if (isDragging) {
             isDragging = false;
             isBirdLaunched = true;
-            birdVelocity.set(slingshotPosition.cpy().sub(currentBirdPosition).scl(0.1f));
+            birdVelocity.set(slingshotPosition.cpy().sub(currentBirdPosition).scl(0.15f * speedMultiplier));
         }
     }
+
 
     private void updateCrates() {
         for (Crate crate : crates) {
@@ -270,16 +275,29 @@ public class Level3GameScreen implements Screen {
 
     private void updateGlassSlabs() {
         for (Glass glass : glassSlabs) {
-            glass.velocity.add(gravity);
+            // Check if the glass is supported by any crate
+            boolean isSupported = false;
+            for (Crate crate : crates) {
+                if (crate.bounds.overlaps(new Rectangle(glass.bounds.x, glass.bounds.y - 1, glass.bounds.width, 1))) {
+                    isSupported = true;
+                    break;
+                }
+            }
+
+            if (!isSupported) {
+                glass.velocity.add(gravity); // Apply gravity if unsupported
+            }
+
             glass.bounds.x += glass.velocity.x;
             glass.bounds.y += glass.velocity.y;
 
-            if (glass.bounds.y < groundY + crates.get(0).bounds.height) {
-                glass.bounds.y = groundY + crates.get(0).bounds.height;
-                glass.velocity.y = 0;
+            if (glass.bounds.y < groundY) {
+                glass.bounds.y = groundY; // Stop at the ground
+                glass.velocity.setZero();
             }
         }
     }
+
 
     private void updatePigs() {
         for (Pig pig : pigs) {
@@ -340,6 +358,7 @@ public class Level3GameScreen implements Screen {
             }
         }
     }
+
 
     private void handleExplosion() {
         Iterator<Pig> pigIterator = pigs.iterator();
