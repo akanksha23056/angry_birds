@@ -16,6 +16,7 @@ public class Level3GameScreen implements Screen {
     private final Main game;
     private final SpriteBatch batch;
 
+
     // Textures
     private final Texture levelImage;
     private final Texture slingshotTexture;

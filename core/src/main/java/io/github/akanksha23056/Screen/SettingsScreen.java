@@ -97,7 +97,7 @@ public class SettingsScreen implements Screen {
         });
 
         // Exit button with hover effect and sound
-        handleButton(exitBounds, exitImage, exitHoverImage, () -> game.setScreen(new AfterExitScreen(game)));
+        handleButton(exitBounds, exitImage, exitHoverImage, () -> Gdx.app.exit());
 
         batch.end();
     }
