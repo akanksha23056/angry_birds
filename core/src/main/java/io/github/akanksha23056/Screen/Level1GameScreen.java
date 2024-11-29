@@ -22,6 +22,8 @@ public class Level1GameScreen implements Screen {
     private final Texture pigTexture;
     private final Texture pigHurtTexture;
     private final Texture crateTexture;
+    private final Texture tntTexture;
+    private final Texture tntExplodeTexture;
     private final Texture pauseButtonTexture;
     private final Texture pauseButtonHoverTexture;
 
@@ -41,41 +43,33 @@ public class Level1GameScreen implements Screen {
     private final Vector2 slingshotPosition;
     private final float slingshotRadius = 1.5f;
 
-    // Pigs and Crates
-    private static class Pig {
+    // Entities
+    private static class Entity {
         Rectangle bounds;
         Vector2 velocity;
-        boolean isHurt;
+        boolean isExploded;
 
-        Pig(Rectangle bounds) {
+        Entity(Rectangle bounds) {
             this.bounds = bounds;
             this.velocity = new Vector2(0, 0);
-            this.isHurt = false;
+            this.isExploded = false;
         }
     }
 
-    private static class Crate {
-        Rectangle bounds;
-        Vector2 velocity;
+    private final ArrayList<Entity> crates = new ArrayList<>();
+    private Entity tntBlock;
+    private Entity pig;
 
-        Crate(Rectangle bounds) {
-            this.bounds = bounds;
-            this.velocity = new Vector2(0, 0);
-        }
-    }
-
-    private final ArrayList<Pig> pigs = new ArrayList<>();
-    private final ArrayList<Crate> crates = new ArrayList<>();
-
-    // Ground height (lowered slightly)
+    // Ground height
     private final float groundY = 130;
 
     // Pause state
     private boolean isPaused = false;
 
-    // Try counter
-    private int tryCounter = 0;
-    private final int maxTries = 3;
+    // TNT explosion timing
+    private boolean isTNTExploded = false;
+    private float explosionTimer = 0f;
+    private final float explosionDuration = 1f; // 1 second delay for win screen
 
     public Level1GameScreen(Main game, String image) {
         this.game = game;
@@ -88,54 +82,53 @@ public class Level1GameScreen implements Screen {
         this.pigTexture = new Texture("pig.png");
         this.pigHurtTexture = new Texture("pighurt.png");
         this.crateTexture = new Texture("crate.png");
+        this.tntTexture = new Texture("tnt.png");
+        this.tntExplodeTexture = new Texture("tntexplode.png");
         this.pauseButtonTexture = new Texture("pause.png");
         this.pauseButtonHoverTexture = new Texture("pause_hover.png");
 
         // Pause Button
         this.pauseButtonBounds = new Rectangle(10, Gdx.graphics.getHeight() - 120, 100, 100);
 
-        // Slingshot position (lowered slightly)
+        // Slingshot position
         this.slingshotPosition = new Vector2(200, groundY + 40);
 
-        // Bird properties (adjusted to be behind the lowered sling)
+        // Bird properties
         this.birdPosition = new Vector2(slingshotPosition.x - 30, slingshotPosition.y);
         this.birdVelocity = new Vector2(0, 0);
         this.isDragging = false;
 
-        // Initialize one crate (lowered slightly)
-        // Initialize one crate
-        Crate crate = new Crate(new Rectangle(400, groundY, 50, 50)); // Place crate slightly higher
+        // Initialize crate
+        Entity crate = new Entity(new Rectangle(400, groundY, 50, 50));
         crates.add(crate);
 
-// Initialize one pig (placed above the crate)
-        pigs.add(new Pig(new Rectangle(crate.bounds.x, crate.bounds.y + crate.bounds.height, 50, 50)));
-        // X, Y, Width, Height
+        // Initialize TNT above crate
+        tntBlock = new Entity(new Rectangle(crate.bounds.x, crate.bounds.y + crate.bounds.height, 50, 50));
 
-        // Initialize one pig (positioned above the lowered crate)
-        pigs.add(new Pig(new Rectangle(crate.bounds.x, crate.bounds.y + crate.bounds.height, 50, 50)));
-    }
-
-    @Override
-    public void show() {
-        if (!game.musicMuted && !game.backgroundMusic.isPlaying()) {
-            game.backgroundMusic.play();
-        }
+        // Initialize pig above TNT
+        pig = new Entity(new Rectangle(tntBlock.bounds.x, tntBlock.bounds.y + tntBlock.bounds.height, 50, 50));
     }
 
     @Override
     public void render(float delta) {
-        if (isPaused) {
-            return; // Skip rendering while paused
-        }
+        if (isPaused) return;
 
         // Clear screen
         ScreenUtils.clear(0.2f, 0.2f, 0.2f, 1.0f);
 
         // Update game mechanics
         updateBirdPosition();
-        updateCrates();
-        updatePigs();
+        updateEntities();
         checkCollisions();
+
+        // Handle explosion delay
+        if (isTNTExploded) {
+            explosionTimer += delta;
+            if (explosionTimer >= explosionDuration) {
+                game.setScreen(new WinScreen(game, 1)); // Redirect to win screen
+                return;
+            }
+        }
 
         // Draw everything
         batch.begin();
@@ -149,22 +142,39 @@ public class Level1GameScreen implements Screen {
         // Draw bird
         batch.draw(birdTexture, birdPosition.x - 25, birdPosition.y - 25, 50, 50);
 
-        // Draw pigs
-        for (Pig pig : pigs) {
-            Texture textureToDraw = pig.isHurt ? pigHurtTexture : pigTexture;
-            batch.draw(textureToDraw, pig.bounds.x, pig.bounds.y, pig.bounds.width, pig.bounds.height);
-        }
-
         // Draw crates
-        for (Crate crate : crates) {
+        for (Entity crate : crates) {
             batch.draw(crateTexture, crate.bounds.x, crate.bounds.y, crate.bounds.width, crate.bounds.height);
         }
 
-        // Draw the pause button
+        // Draw TNT or explosion
+        if (tntBlock.isExploded) {
+            // Explosion size is 5x TNT size
+            float explosionWidth = tntBlock.bounds.width * 5;
+            float explosionHeight = tntBlock.bounds.height * 5;
+
+            // Draw explosion centered at the TNT block
+            batch.draw(tntExplodeTexture,
+                tntBlock.bounds.x - (explosionWidth - tntBlock.bounds.width) / 2, // Center explosion horizontally
+                tntBlock.bounds.y - (explosionHeight - tntBlock.bounds.height) / 2, // Center explosion vertically
+                explosionWidth,
+                explosionHeight);
+        } else {
+            batch.draw(tntTexture, tntBlock.bounds.x, tntBlock.bounds.y, tntBlock.bounds.width, tntBlock.bounds.height);
+        }
+
+        // Draw pig
+        if (!isTNTExploded) {
+            batch.draw(pig.isExploded ? pigHurtTexture : pigTexture,
+                pig.bounds.x, pig.bounds.y, pig.bounds.width, pig.bounds.height);
+        }
+
+        // Draw pause button
         drawPauseButton();
 
         batch.end();
     }
+
 
     private void updateBirdPosition() {
         if (Gdx.input.isTouched()) {
@@ -181,8 +191,6 @@ public class Level1GameScreen implements Screen {
             }
         } else if (isDragging) {
             isDragging = false;
-            tryCounter++; // Increment try counter
-
             birdVelocity.set(slingshotPosition.cpy().sub(birdPosition).scl(0.1f));
         }
 
@@ -196,85 +204,70 @@ public class Level1GameScreen implements Screen {
                 birdVelocity.setZero();
             }
         }
+    }
 
-        // Check if max tries exceeded
-        if (tryCounter >= maxTries) {
-            game.setScreen(new LoseScreen(game,1));
+    private void updateEntities() {
+        // Update crate
+        for (Entity crate : crates) {
+            updateEntity(crate);
+        }
+
+        // Update TNT
+        boolean isTNTSupported = false;
+        for (Entity crate : crates) {
+            if (crate.bounds.overlaps(new Rectangle(tntBlock.bounds.x, tntBlock.bounds.y - 1, tntBlock.bounds.width, 1))) {
+                isTNTSupported = true;
+                break;
+            }
+        }
+        if (!isTNTSupported) updateEntity(tntBlock);
+
+        // Update pig
+        if (!tntBlock.bounds.overlaps(new Rectangle(pig.bounds.x, pig.bounds.y - 1, pig.bounds.width, 1))) {
+            updateEntity(pig);
         }
     }
 
-    private void updateCrates() {
-        for (Crate crate : crates) {
-            crate.velocity.add(gravity);
-            crate.bounds.x += crate.velocity.x;
-            crate.bounds.y += crate.velocity.y;
+    private void updateEntity(Entity entity) {
+        entity.velocity.add(gravity);
+        entity.bounds.x += entity.velocity.x;
+        entity.bounds.y += entity.velocity.y;
 
-            if (crate.bounds.y < groundY) { // Match the raised position
-                crate.bounds.y = groundY;
-                crate.velocity.y = 0;
-            }
+        if (entity.bounds.y < groundY) {
+            entity.bounds.y = groundY;
+            entity.velocity.setZero();
         }
     }
-
-    private void updatePigs() {
-        for (Pig pig : pigs) {
-            boolean isSupported = false;
-
-            for (Crate crate : crates) {
-                // Check if the pig is directly above a crate
-                if (crate.bounds.overlaps(new Rectangle(pig.bounds.x, pig.bounds.y - 1, pig.bounds.width, 1))) {
-                    isSupported = true;
-                    break;
-                }
-            }
-
-            if (!isSupported) {
-                pig.velocity.add(gravity); // Apply gravity if not supported
-            }
-
-            pig.bounds.x += pig.velocity.x; // Update horizontal movement
-            pig.bounds.y += pig.velocity.y; // Update vertical movement
-
-            // Check if pig has reached the ground
-            if (pig.bounds.y < groundY) {
-                pig.bounds.y = groundY;
-                pig.velocity.y = 0; // Stop vertical movement
-            }
-        }
-    }
-
 
     private void checkCollisions() {
-        for (Pig pig : pigs) {
-            if (!pig.isHurt && pig.bounds.contains(birdPosition.x, birdPosition.y)) {
-                pig.isHurt = true; // Change texture to hurt
-                unlockLevel2AndRedirect();
-            }
+        // Handle TNT explosion
+        if (!tntBlock.isExploded && tntBlock.bounds.contains(birdPosition.x, birdPosition.y)) {
+            tntBlock.isExploded = true;
+            isTNTExploded = true; // Start explosion timer
+            crates.clear();
+            pig.isExploded = true;
         }
 
-        for (Crate crate : crates) {
+        // Handle pig collision
+        if (!pig.isExploded && pig.bounds.contains(birdPosition.x, birdPosition.y)) {
+            pig.isExploded = true; // Change to hurt texture
+            game.setScreen(new WinScreen(game, 1)); // Redirect to win screen
+        }
+
+        // Handle crate collision
+        for (Entity crate : crates) {
             if (crate.bounds.contains(birdPosition.x, birdPosition.y)) {
-                crate.velocity.add(birdVelocity.cpy().scl(0.5f)); // Apply velocity to the crate
+                crate.velocity.add(birdVelocity.cpy().scl(0.5f));
             }
         }
     }
-
-    private void unlockLevel2AndRedirect() {
-        // Unlock level 2
-
-        // Redirect to win screen
-        game.setScreen(new WinScreen(game,1));
-    }
-
 
     private void drawPauseButton() {
         boolean isHovered = pauseButtonBounds.contains(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
         if (isHovered) {
             batch.draw(pauseButtonHoverTexture, pauseButtonBounds.x - 5, pauseButtonBounds.y - 5,
                 pauseButtonBounds.width + 10, pauseButtonBounds.height + 10);
-            if (Gdx.input.isButtonJustPressed(0)) {
-                pauseGame();
-            }
+            if (Gdx.input.isButtonJustPressed(0)) pauseGame();
         } else {
             batch.draw(pauseButtonTexture, pauseButtonBounds.x, pauseButtonBounds.y,
                 pauseButtonBounds.width, pauseButtonBounds.height);
@@ -283,7 +276,13 @@ public class Level1GameScreen implements Screen {
 
     private void pauseGame() {
         game.setScreen(new PauseScreen(game, this));
-        // Transition to pause menu
+    }
+
+    @Override
+    public void show() {
+        if (!game.musicMuted && !game.backgroundMusic.isPlaying()) {
+            game.backgroundMusic.play();
+        }
     }
 
     @Override
@@ -294,6 +293,8 @@ public class Level1GameScreen implements Screen {
         pigTexture.dispose();
         pigHurtTexture.dispose();
         crateTexture.dispose();
+        tntTexture.dispose();
+        tntExplodeTexture.dispose();
         pauseButtonTexture.dispose();
         pauseButtonHoverTexture.dispose();
     }
