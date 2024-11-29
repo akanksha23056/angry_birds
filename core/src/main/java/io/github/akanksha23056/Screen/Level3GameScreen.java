@@ -194,10 +194,11 @@ public class Level3GameScreen implements Screen {
 
         // Draw glass slabs
         // Draw glass slabs with rotation
+        // Draw glass slabs with rotation
         for (Glass glass : glassSlabs) {
             batch.draw(glassTexture,
                 glass.bounds.x, glass.bounds.y,
-                glass.bounds.width / 2, glass.bounds.height / 2, // Origin for rotation
+                glass.bounds.width / 2, glass.bounds.height / 2, // Rotation origin (center)
                 glass.bounds.width, glass.bounds.height,
                 1, 1, // Scale
                 glass.rotationAngle, // Rotation angle
@@ -205,7 +206,6 @@ public class Level3GameScreen implements Screen {
                 glassTexture.getWidth(), glassTexture.getHeight(),
                 false, false);
         }
-
 
         // Draw pause button
         drawPauseButton();
@@ -279,12 +279,17 @@ public class Level3GameScreen implements Screen {
             crate.bounds.x += crate.velocity.x;
             crate.bounds.y += crate.velocity.y;
 
+            // Stop crate at the ground
             if (crate.bounds.y < groundY) {
                 crate.bounds.y = groundY;
                 crate.velocity.y = 0;
             }
+
+            // Reduce velocity over time for realistic sliding
+            crate.velocity.x *= 0.95f; // Friction
         }
     }
+
 
     private void updateGlassSlabs() {
         for (Glass glass : glassSlabs) {
@@ -294,34 +299,50 @@ public class Level3GameScreen implements Screen {
             for (Crate crate : crates) {
                 if (crate.bounds.overlaps(new Rectangle(glass.bounds.x, glass.bounds.y - 1, glass.bounds.width, 1))) {
                     isSupported = true;
+
+                    // Inherit crate's velocity if it moves significantly
+                    if (Math.abs(crate.velocity.x) > 0.2f) {
+                        glass.velocity.x += crate.velocity.x * 0.5f; // Add fraction of crate velocity
+                        glass.rotationAngle += crate.velocity.x * 2.0f; // Increase tilt based on crate movement
+                    }
+
+                    // Prevent tipping beyond 45 degrees while on the crate
+                    if (Math.abs(glass.rotationAngle) > 45) {
+                        glass.rotationAngle = Math.signum(glass.rotationAngle) * 45;
+                    }
                     break;
                 }
             }
 
+            // Apply gravity if unsupported
             if (!isSupported) {
-                glass.velocity.add(gravity); // Apply gravity if unsupported
+                glass.velocity.add(gravity);
             }
 
-            // Simulate tipping rotation
-            if (glass.rotationAngle > 0) {
-                glass.rotationAngle += 1.0f; // Increment tipping angle
-                if (glass.rotationAngle > 90) { // Fully tipped
-                    glass.rotationAngle = 90;
+            // Apply rotation-based falling logic
+            if (Math.abs(glass.rotationAngle) > 45 || !isSupported) {
+                // Glass slab starts to fall
+                glass.rotationAngle += 1.0f * Math.signum(glass.velocity.x); // Continue tipping
+                if (Math.abs(glass.rotationAngle) >= 90) {
+                    glass.rotationAngle = 90; // Fully tipped
                 }
 
-                // Apply horizontal displacement to simulate tipping
-                glass.bounds.x += 2.0f * Math.signum(glass.velocity.x);
+                // Move horizontally as it tips and falls
+                glass.bounds.x += glass.velocity.x + Math.signum(glass.rotationAngle) * 2.0f;
             }
 
+            // Update glass position with velocity
             glass.bounds.x += glass.velocity.x;
             glass.bounds.y += glass.velocity.y;
 
+            // Stop glass at the ground
             if (glass.bounds.y < groundY) {
-                glass.bounds.y = groundY; // Stop at the ground
+                glass.bounds.y = groundY;
                 glass.velocity.setZero();
             }
         }
     }
+
 
 
 
