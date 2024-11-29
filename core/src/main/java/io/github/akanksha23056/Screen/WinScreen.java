@@ -21,8 +21,9 @@ public class WinScreen implements Screen {
     private final Rectangle menuButtonBounds;
     private final Rectangle playNextButtonBounds;
     private final Rectangle replayButtonBounds;
+    private final int currentLevel;
 
-    public WinScreen(Main game) {
+    public WinScreen(Main game, int currentLevel) {
         this.game = game;
         this.batch = game.batch;
         this.winTexture = new Texture("winscreen.jpg");
@@ -32,6 +33,7 @@ public class WinScreen implements Screen {
         this.playNextButtonHoverTexture = new Texture("playnext_hover.png");
         this.replayButtonTexture = new Texture("replay.png");
         this.replayButtonHoverTexture = new Texture("replay_hover.png");
+        this.currentLevel = currentLevel;
 
         // Set button sizes and positions
         float buttonWidth = 180f, buttonHeight = 180f;
@@ -58,8 +60,8 @@ public class WinScreen implements Screen {
 
         // Draw buttons with hover effects
         drawButton(menuButtonBounds, menuButtonTexture, menuButtonHoverTexture, () -> game.setScreen(game.getLevelsScreen()));
-        drawButton(playNextButtonBounds, playNextButtonTexture, playNextButtonHoverTexture, () -> game.setScreen(new Level2GameScreen(game)));
-        drawButton(replayButtonBounds, replayButtonTexture, replayButtonHoverTexture, () -> game.setScreen(new Level1GameScreen(game, "level1game.jpg")));
+        drawButton(playNextButtonBounds, playNextButtonTexture, playNextButtonHoverTexture, this::handlePlayNext);
+        drawButton(replayButtonBounds, replayButtonTexture, replayButtonHoverTexture, this::handleReplay);
 
         batch.end();
     }
@@ -74,6 +76,30 @@ public class WinScreen implements Screen {
             }
         } else {
             batch.draw(buttonTexture, bounds.x, bounds.y, bounds.width, bounds.height);
+        }
+    }
+
+    private void handlePlayNext() {
+        switch (currentLevel) {
+            case 1:
+                game.setScreen(new Level2GameScreen(game));
+                break;
+            case 2:
+                game.setScreen(new Level3GameScreen(game));
+                break;
+            // Add more cases if there are more levels
+        }
+    }
+
+    private void handleReplay() {
+        switch (currentLevel) {
+            case 1:
+                game.setScreen(new Level1GameScreen(game, "level1game.jpg"));
+                break;
+            case 2:
+                game.setScreen(new Level2GameScreen(game));
+                break;
+            // Add more cases if there are more levels
         }
     }
 

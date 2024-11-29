@@ -199,7 +199,7 @@ public class Level1GameScreen implements Screen {
 
         // Check if max tries exceeded
         if (tryCounter >= maxTries) {
-            game.setScreen(new LoseScreen(game));
+            game.setScreen(new LoseScreen(game,1));
         }
     }
 
@@ -263,8 +263,9 @@ public class Level1GameScreen implements Screen {
         // Unlock level 2
 
         // Redirect to win screen
-        game.setScreen(new WinScreen(game));
+        game.setScreen(new WinScreen(game,1));
     }
+
 
     private void drawPauseButton() {
         boolean isHovered = pauseButtonBounds.contains(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());

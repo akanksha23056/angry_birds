@@ -15,13 +15,15 @@ public class LoseScreen implements Screen {
     private final Texture retryButtonTexture;
     private final Texture retryButtonHoverTexture;
     private final Rectangle retryButtonBounds;
+    private final int currentLevel;
 
-    public LoseScreen(Main game) {
+    public LoseScreen(Main game, int currentLevel) {
         this.game = game;
         this.batch = game.batch;
         this.loseTexture = new Texture("losescreen.jpg");
         this.retryButtonTexture = new Texture("replay.png");
         this.retryButtonHoverTexture = new Texture("replay_hover.png");
+        this.currentLevel = currentLevel;
 
         // Set button bounds
         float buttonWidth = 180f, buttonHeight = 180f;
@@ -45,7 +47,7 @@ public class LoseScreen implements Screen {
         batch.draw(loseTexture, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
         // Draw retry button with hover effects
-        drawButton(retryButtonBounds, retryButtonTexture, retryButtonHoverTexture, () -> game.setScreen(new Level1GameScreen(game, "level1game.jpg")));
+        drawButton(retryButtonBounds, retryButtonTexture, retryButtonHoverTexture, this::handleRetry);
 
         batch.end();
     }
@@ -60,6 +62,18 @@ public class LoseScreen implements Screen {
             }
         } else {
             batch.draw(buttonTexture, bounds.x, bounds.y, bounds.width, bounds.height);
+        }
+    }
+
+    private void handleRetry() {
+        switch (currentLevel) {
+            case 1:
+                game.setScreen(new Level1GameScreen(game, "level1game.jpg"));
+                break;
+            case 2:
+                game.setScreen(new Level2GameScreen(game));
+                break;
+            // Add more cases if there are more levels
         }
     }
 

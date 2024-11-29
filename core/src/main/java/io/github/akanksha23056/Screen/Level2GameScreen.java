@@ -1,5 +1,3 @@
-//level 2 perf
-
 package io.github.akanksha23056.Screen;
 
 import com.badlogic.gdx.Gdx;
@@ -81,6 +79,9 @@ public class Level2GameScreen implements Screen {
     // Pause state
     private boolean isPaused = false;
 
+    // Track tries
+    private int yellowBirdTries = 0;
+
     public Level2GameScreen(Main game) {
         this.game = game;
         this.batch = game.batch;
@@ -141,6 +142,7 @@ public class Level2GameScreen implements Screen {
         updateCrates();
         updatePigs();
         checkCollisions();
+        checkWinCondition(); // Check if all pigs are hit
 
         // Draw everything
         batch.begin();
@@ -195,6 +197,10 @@ public class Level2GameScreen implements Screen {
                     if (birdVelocity.len() < 0.01f) {
                         isBirdLaunched = false; // Allow for re-launch
                         yellowBirdPosition.set(slingshotPosition.x - 50, slingshotPosition.y); // Reset position
+                        yellowBirdTries++;
+                        if (yellowBirdTries >= 2) {
+                            checkGameOver();
+                        }
                     }
                 } else if (currentBirdType == BirdType.RED) {
                     // Red bird can only be shot once
@@ -224,7 +230,6 @@ public class Level2GameScreen implements Screen {
             birdVelocity.set(slingshotPosition.cpy().sub(currentBirdPosition).scl(0.1f * speedMultiplier));
         }
     }
-
 
     private void updateCrates() {
         for (Crate crate : crates) {
@@ -283,6 +288,31 @@ public class Level2GameScreen implements Screen {
         }
     }
 
+    private void checkWinCondition() {
+        boolean allPigsHit = true;
+        for (Pig pig : pigs) {
+            if (!pig.isHurt) {
+                allPigsHit = false;
+                break;
+            }
+        }
+        if (allPigsHit) {
+            game.setScreen(new WinScreen(game, 2)); // Redirect to WinScreen for Level 2
+        }
+    }
+
+    private void checkGameOver() {
+        boolean allPigsHit = true;
+        for (Pig pig : pigs) {
+            if (!pig.isHurt) {
+                allPigsHit = false;
+                break;
+            }
+        }
+        if (!allPigsHit) {
+            game.setScreen(new LoseScreen(game, 2)); // Redirect to LoseScreen for Level 2
+        }
+    }
 
     private void drawPauseButton() {
         boolean isHovered = pauseButtonBounds.contains(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
