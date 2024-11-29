@@ -449,15 +449,31 @@ public class Level3GameScreen implements Screen {
             }
         }
     }
-
-    private void switchBird() {
-        if (currentBirdType == BirdType.RED) {
-            currentBirdType = BirdType.YELLOW;
-        } else if (currentBirdType == BirdType.YELLOW) {
-            currentBirdType = BirdType.BLACK;
+    private void checkWinCondition() {
+        boolean allPigsHit = true;
+        for (Level3GameScreen.Pig pig : pigs) {
+            if (!pig.isHurt) {
+                allPigsHit = false;
+                break;
+            }
         }
-        isBirdLaunched = false;
+        if (allPigsHit) {
+            game.setScreen(new WinScreen(game, 3)); // Redirect to WinScreen for Level 3
+        }
     }
+    private void checkGameOver() {
+        boolean allPigsHit = true;
+        for (Level3GameScreen.Pig pig : pigs) {
+            if (!pig.isHurt) {
+                allPigsHit = false;
+                break;
+            }
+        }
+        if (!allPigsHit) {
+            game.setScreen(new LoseScreen(game, 3)); // Redirect to LoseScreen for Level 3
+        }
+    }
+
 
 
     private void drawPauseButton() {

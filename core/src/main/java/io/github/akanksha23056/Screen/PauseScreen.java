@@ -80,10 +80,14 @@ public class PauseScreen implements Screen {
         }
     }
 
+    // PauseScreen.java
     private void restartLevel() {
-        // Identify the type of the current level and restart accordingly
-        if (currentLevel instanceof Level2GameScreen) {
+        if (currentLevel instanceof Level1GameScreen) {
+            game.setScreen(new Level1GameScreen(game, "Level1")); // Pass the required String parameter
+        } else if (currentLevel instanceof Level2GameScreen) {
             game.setScreen(new Level2GameScreen(game)); // Restart Level2GameScreen
+        } else if (currentLevel instanceof Level3GameScreen) {
+            game.setScreen(new Level3GameScreen(game)); // Restart Level3GameScreen
         }
         // Add similar conditions for other levels if necessary
     }
