@@ -6,9 +6,12 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.utils.DragListener;
 
-public class Bird extends Image {
-    private final World world;
-    private final Body body;
+import java.io.Serializable;
+
+public class Bird extends Image implements Serializable {
+    private static final long serialVersionUID = 1L;
+    private transient final World world;
+    private transient final Body body;
     private boolean isDragging;
 
     public Bird(World world, String texturePath, float x, float y, float scaleFactor) {

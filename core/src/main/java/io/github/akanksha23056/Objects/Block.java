@@ -1,12 +1,14 @@
 package io.github.akanksha23056.Objects;
 
-import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.physics.box2d.*;
 
-public class Block extends Image {
-    private Body body;
+import java.io.Serializable;
+
+public class Block extends Image implements Serializable {
+    private static final long serialVersionUID = 1L;
+    private transient Body body;
 
     public Block(World world, String texturePath, float x, float y, float scaleFactor) {
         super(new Texture(texturePath));
@@ -45,7 +47,7 @@ public class Block extends Image {
         getTexture().dispose();
     }
 
-    private ApplicationListener getTexture() {
-        return null;
+    private Texture getTexture() {
+        return (Texture) getDrawable();
     }
 }

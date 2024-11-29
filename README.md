@@ -1,33 +1,71 @@
-# ap_proj
+# Angry Birds Game
 
 A [libGDX](https://libgdx.com/) project generated with [gdx-liftoff](https://github.com/libgdx/gdx-liftoff).
 
-This project was generated with a template including simple application launchers and an `ApplicationAdapter` extension that draws libGDX logo.
+This project is a 2D physics-based game inspired by **Angry Birds**, where players launch projectiles (birds) to destroy structures and defeat enemies. The game implements core Object-Oriented Programming (OOP) concepts and leverages LibGDX's robust game development framework.
 
-## Platforms
+---
 
-- `core`: Main module with the application logic shared by all platforms.
-- `lwjgl3`: Primary desktop platform using LWJGL3; was called 'desktop' in older docs.
+## Game Features
 
-## Gradle
+1. **Physics-Based Gameplay:**
+    - Realistic trajectory and collision simulation using **Box2D** physics engine.
+    - Drag-and-launch functionality for projectiles.
 
-This project uses [Gradle](https://gradle.org/) to manage dependencies.
-The Gradle wrapper was included, so you can run Gradle tasks using `gradlew.bat` or `./gradlew` commands.
-Useful Gradle tasks and flags:
+2. **Levels System:**
+    - Multiple levels of increasing difficulty.
+    - Levels unlock sequentially upon completion of the previous ones.
+    - Locked levels displayed with a `lock.png` overlay.
 
-- `--continue`: when using this flag, errors will not stop the tasks from running.
-- `--daemon`: thanks to this flag, Gradle daemon will be used to run chosen tasks.
-- `--offline`: when using this flag, cached dependency archives will be used.
-- `--refresh-dependencies`: this flag forces validation of all dependencies. Useful for snapshot versions.
-- `build`: builds sources and archives of every project.
-- `cleanEclipse`: removes Eclipse project data.
-- `cleanIdea`: removes IntelliJ project data.
-- `clean`: removes `build` folders, which store compiled classes and built archives.
-- `eclipse`: generates Eclipse project data.
-- `idea`: generates IntelliJ project data.
-- `lwjgl3:jar`: builds application's runnable jar, which can be found at `lwjgl3/build/libs`.
-- `lwjgl3:run`: starts the application.
-- `test`: runs unit tests (if any).
+3. **Dynamic Destruction:**
+    - Structures react dynamically to hits based on physics calculations.
 
-Note that most tasks that are not specific to a single project can be run with `name:` prefix, where the `name` should be replaced with the ID of a specific project.
-For example, `core:clean` removes `build` folder only from the `core` project.
+4. **Scoring System:**
+    - Players score points by destroying structures and defeating enemies.
+
+5. **Interactive UI:**
+    - Hover effects and buttons for navigation.
+    - Background music toggle functionality.
+
+---
+
+## OOPS Concepts Used
+
+### 1. **Encapsulation**
+- Each game component (e.g., Bird, Slingshot, Structures) is encapsulated within its own class.
+- Private fields with getter and setter methods to control access.
+
+### 2. **Inheritance**
+- Game objects like birds, pigs, and blocks inherit from a base `GameObject` class.
+- Levels inherit from a base `Level` class to maintain consistent behavior.
+
+### 3. **Polymorphism**
+- Methods like `render()` and `update()` are overridden for different game objects and levels.
+- Dynamic behavior implemented for birds and structures depending on the type of projectile used.
+
+### 4. **Abstraction**
+- Complex functionalities like physics simulation, collision detection, and scoring are abstracted from the player.
+- High-level interfaces like `Screen` for game states (menu, level selection, gameplay) make transitions seamless.
+
+### 5. **Composition**
+- Levels are composed of multiple `GameObject` instances such as birds, blocks, and enemies.
+- Each level screen is composed of textures, buttons, and physics objects.
+
+---
+
+## Levels Description
+
+### **Level 1:**
+- Basic gameplay introduction.
+- One bird to launch, simple structures, and one enemy.
+
+### **Level 2:**
+- Introduces larger structures with multiple enemies.
+- More birds provided to complete the level.
+
+### **Level 3:**
+- Complex structures requiring strategic hits.
+- Final boss pig added for an extra challenge.
+
+
+

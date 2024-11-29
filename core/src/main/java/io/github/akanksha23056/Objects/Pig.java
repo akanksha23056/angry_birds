@@ -6,9 +6,12 @@ import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 
-public class Pig extends Image {
-    private final World world;
-    private final Body body;
+import java.io.Serializable;
+
+public class Pig extends Image implements Serializable {
+    private static final long serialVersionUID = 1L;
+    private transient final World world;
+    private transient final Body body;
 
     public Pig(World world, String texturePath, float x, float y, float scaleFactor) {
         super(new Texture(texturePath));

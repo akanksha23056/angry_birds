@@ -4,8 +4,11 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 
-public class Catapult extends Actor {
-    private final Texture texture;
+import java.io.Serializable;
+
+public class Catapult extends Actor implements Serializable {
+    private static final long serialVersionUID = 1L;
+    private transient final Texture texture;
 
     public Catapult(String texturePath, float x, float y) {
         this.texture = new Texture(texturePath);
