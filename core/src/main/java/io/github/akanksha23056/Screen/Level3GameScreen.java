@@ -16,7 +16,6 @@ public class Level3GameScreen implements Screen {
     private final Main game;
     private final SpriteBatch batch;
 
-
     // Textures
     private final Texture levelImage;
     private final Texture slingshotTexture;
@@ -26,6 +25,7 @@ public class Level3GameScreen implements Screen {
     private final Texture blackExplodeTexture;
     private final Texture pigTexture;
     private final Texture pigHurtTexture;
+    private final Texture zombiePigTexture; // New: Zombie pig texture
     private final Texture crateTexture;
     private final Texture glassTexture;
     private final Texture pauseButtonTexture;
@@ -44,6 +44,10 @@ public class Level3GameScreen implements Screen {
     private boolean isBirdLaunched = false;
     private boolean isBlackBirdExploded = false;
 
+    // Zombie Pig
+    private Pig zombiePig = null; // Reference to zombie pig
+    private boolean isZombiePigSpawned = false;
+
     // Gravity and damping
     private final Vector2 gravity = new Vector2(0, -0.05f);
     private final float damping = 0.98f;
@@ -52,7 +56,7 @@ public class Level3GameScreen implements Screen {
     private final Vector2 slingshotPosition;
     private final float slingshotRadius = 1.5f;
 
-    // Pigs, Crates, and Glass Slabs
+    // Game elements
     private static class Pig {
         Rectangle bounds;
         Vector2 velocity;
@@ -87,7 +91,6 @@ public class Level3GameScreen implements Screen {
         }
     }
 
-
     private final ArrayList<Pig> pigs = new ArrayList<>();
     private final ArrayList<Crate> crates = new ArrayList<>();
     private final ArrayList<Glass> glassSlabs = new ArrayList<>();
@@ -111,6 +114,7 @@ public class Level3GameScreen implements Screen {
         this.blackExplodeTexture = new Texture("blackexplode.png");
         this.pigTexture = new Texture("pig.png");
         this.pigHurtTexture = new Texture("pighurt.png");
+        this.zombiePigTexture = new Texture("zombiepig.png");
         this.crateTexture = new Texture("crate.png");
         this.glassTexture = new Texture("glass.png");
         this.pauseButtonTexture = new Texture("pause.png");
@@ -187,13 +191,17 @@ public class Level3GameScreen implements Screen {
             batch.draw(textureToDraw, pig.bounds.x, pig.bounds.y, pig.bounds.width, pig.bounds.height);
         }
 
+        // Draw zombie pig if spawned
+        if (isZombiePigSpawned && zombiePig != null) {
+            Texture textureToDraw = zombiePig.isHurt ? pigHurtTexture : zombiePigTexture;
+            batch.draw(textureToDraw, zombiePig.bounds.x, zombiePig.bounds.y, zombiePig.bounds.width, zombiePig.bounds.height);
+        }
+
         // Draw crates
         for (Crate crate : crates) {
             batch.draw(crateTexture, crate.bounds.x, crate.bounds.y, crate.bounds.width, crate.bounds.height);
         }
 
-        // Draw glass slabs
-        // Draw glass slabs with rotation
         // Draw glass slabs with rotation
         for (Glass glass : glassSlabs) {
             batch.draw(glassTexture,
@@ -272,7 +280,6 @@ public class Level3GameScreen implements Screen {
         }
     }
 
-
     private void updateCrates() {
         for (Crate crate : crates) {
             crate.velocity.add(gravity);
@@ -289,7 +296,6 @@ public class Level3GameScreen implements Screen {
             crate.velocity.x *= 0.95f; // Friction
         }
     }
-
 
     private void updateGlassSlabs() {
         for (Glass glass : glassSlabs) {
@@ -343,10 +349,6 @@ public class Level3GameScreen implements Screen {
         }
     }
 
-
-
-
-
     private void updatePigs() {
         for (Pig pig : pigs) {
             boolean isSupported = false;
@@ -391,6 +393,20 @@ public class Level3GameScreen implements Screen {
         for (Pig pig : pigs) {
             if (!pig.isHurt && currentBirdPosition.dst(pig.bounds.x + 25, pig.bounds.y + 25) < 25) {
                 pig.isHurt = true;
+
+                // Spawn zombie pig when any pig turns into pighurt.png
+                if (!isZombiePigSpawned) {
+                    float randomX = 100 + (float) Math.random() * (Gdx.graphics.getWidth() - 200);
+                    zombiePig = new Pig(new Rectangle(randomX, groundY, 50, 50));
+                    isZombiePigSpawned = true;
+                }
+            }
+        }
+
+        // Check collision with zombie pig
+        if (isZombiePigSpawned && zombiePig != null && !zombiePig.isHurt) {
+            if (currentBirdPosition.dst(zombiePig.bounds.x + 25, zombiePig.bounds.y + 25) < 25) {
+                zombiePig.isHurt = true;
             }
         }
 
@@ -407,7 +423,6 @@ public class Level3GameScreen implements Screen {
             }
         }
     }
-
 
     private void handleExplosion() {
         Iterator<Pig> pigIterator = pigs.iterator();
@@ -434,6 +449,16 @@ public class Level3GameScreen implements Screen {
             }
         }
     }
+
+    private void switchBird() {
+        if (currentBirdType == BirdType.RED) {
+            currentBirdType = BirdType.YELLOW;
+        } else if (currentBirdType == BirdType.YELLOW) {
+            currentBirdType = BirdType.BLACK;
+        }
+        isBirdLaunched = false;
+    }
+
 
     private void drawPauseButton() {
         boolean isHovered = pauseButtonBounds.contains(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
@@ -469,6 +494,7 @@ public class Level3GameScreen implements Screen {
         blackBirdTexture.dispose();
         blackExplodeTexture.dispose();
         pigTexture.dispose();
+        zombiePigTexture.dispose();
         pigHurtTexture.dispose();
         crateTexture.dispose();
         glassTexture.dispose();
