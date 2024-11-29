@@ -67,5 +67,32 @@ This project is a 2D physics-based game inspired by **Angry Birds**, where playe
 - Complex structures requiring strategic hits.
 - Final boss pig added for an extra challenge.
 
+---
+
+## **Birds**
+### **Red:**
+- The standard bird with balanced properties.
+- Has no special abilities but is reliable for destroying standard structures.
+
+### **Chuck:**
+- A speedster bird capable of moving extremely fast.
+- Deals extra damage to wooden blocks and small structures due to its speed.
+- Activated by tapping the screen after launching.
+### **Bomb:**
+- A heavy bird that explodes on impact.
+- Effective against stone and metal blocks, causing widespread destruction.
+- Explosion is triggered either on impact or by tapping the screen after launch.
+## **Pigs**
+### **Normal Pig:**
+- The standard enemy that sits on or inside structures.
+- Easily defeated when hit by a bird or when the structure collapses on it.
+### **Magic Pig:**
+- A tricky pig that teleports to another location when hit.
+- Requires multiple hits to defeat as it relocates each time it’s attacked.
+### **Zombie Pig:**
+- A randomly appearing pig that enters the screen from the sides.
+- Adds an element of surprise to gameplay, as it may interfere with planned shots.
+- Can be defeated like normal pigs but requires strategic timing.
+
 
 
