@@ -21,6 +21,7 @@ public class Level2GameScreen implements Screen {
     private final Texture redBirdTexture;
     private final Texture yellowBirdTexture;
     private final Texture pigTexture;
+    private final Texture magicPigTexture;
     private final Texture pigHurtTexture;
     private final Texture crateTexture;
     private final Texture pauseButtonTexture;
@@ -60,6 +61,25 @@ public class Level2GameScreen implements Screen {
         }
     }
 
+    private static class MagicPig extends Pig {
+        boolean isMagic;
+
+        MagicPig(Rectangle bounds) {
+            super(bounds);
+            this.isMagic = true; // Unique property for magic pigs
+        }
+
+        // Teleport the magic pig to a new random position
+        void teleport(float groundY) { // Accept groundY as a parameter
+            float randomX = 100 + (float) Math.random() * (Gdx.graphics.getWidth() - 200);
+            float randomY = groundY + 50 + (float) Math.random() * 200; // Random position above ground
+            this.bounds.setPosition(randomX, randomY);
+            this.isMagic = false; // Turns into a regular pig after teleporting
+        }
+    }
+
+
+
     private static class Crate {
         Rectangle bounds;
         Vector2 velocity;
@@ -92,6 +112,7 @@ public class Level2GameScreen implements Screen {
         this.redBirdTexture = new Texture("redbird.png");
         this.yellowBirdTexture = new Texture("yellowbird.png");
         this.pigTexture = new Texture("pig.png");
+        this.magicPigTexture = new Texture("magicpig.png");
         this.pigHurtTexture = new Texture("pighurt.png");
         this.crateTexture = new Texture("crate.png");
         this.pauseButtonTexture = new Texture("pause.png");
@@ -114,11 +135,16 @@ public class Level2GameScreen implements Screen {
             crates.add(new Crate(new Rectangle(300 + i * 100, groundY, 50, 50))); // X, Y, Width, Height
         }
 
-        // Initialize pigs (positioned above crates)
+        // Initialize pigs (replace the middle pig with the magic pig)
         for (int i = 0; i < crates.size(); i++) {
             Crate crate = crates.get(i);
-            pigs.add(new Pig(new Rectangle(crate.bounds.x, crate.bounds.y + crate.bounds.height, 50, 50)));
+            if (i == 1) { // Middle crate gets the magic pig
+                pigs.add(new MagicPig(new Rectangle(crate.bounds.x, crate.bounds.y + crate.bounds.height, 50, 50)));
+            } else {
+                pigs.add(new Pig(new Rectangle(crate.bounds.x, crate.bounds.y + crate.bounds.height, 50, 50)));
+            }
         }
+
     }
 
     @Override
@@ -161,11 +187,18 @@ public class Level2GameScreen implements Screen {
             batch.draw(yellowBirdTexture, yellowBirdPosition.x - 25, yellowBirdPosition.y - 25, 50, 50);
         }
 
-        // Draw pigs
+        // Draw pigs (including the magic pig)
         for (Pig pig : pigs) {
-            Texture textureToDraw = pig.isHurt ? pigHurtTexture : pigTexture;
+            Texture textureToDraw;
+            if (pig instanceof MagicPig) {
+                MagicPig magicPig = (MagicPig) pig;
+                textureToDraw = magicPig.isMagic ? magicPigTexture : pigTexture; // Use magic texture or normal pig texture
+            } else {
+                textureToDraw = pig.isHurt ? pigHurtTexture : pigTexture; // Regular or hurt pig texture
+            }
             batch.draw(textureToDraw, pig.bounds.x, pig.bounds.y, pig.bounds.width, pig.bounds.height);
         }
+
 
         // Draw crates
         for (Crate crate : crates) {
@@ -270,23 +303,38 @@ public class Level2GameScreen implements Screen {
     }
 
     private void checkCollisions() {
-        // Determine current bird's position based on its type
         Vector2 currentBirdPosition = currentBirdType == BirdType.RED ? redBirdPosition : yellowBirdPosition;
 
-        // Check collisions with pigs
-        for (Pig pig : pigs) {
+        for (int i = 0; i < pigs.size(); i++) {
+            Pig pig = pigs.get(i);
+
             if (!pig.isHurt && currentBirdPosition.dst(pig.bounds.x + 25, pig.bounds.y + 25) < 25) {
-                pig.isHurt = true; // Mark the pig as hurt
+                if (pig instanceof MagicPig) {
+                    MagicPig magicPig = (MagicPig) pig;
+                    if (magicPig.isMagic) {
+                        // Teleport the magic pig and transform it into a normal pig
+                        magicPig.teleport(groundY);
+                        transformToRegularPig(i, magicPig);
+                    }
+                } else {
+                    pig.isHurt = true; // Mark as hurt if it's a regular pig
+                }
             }
         }
 
-        // Check collisions with crates
         for (Crate crate : crates) {
             if (currentBirdPosition.dst(crate.bounds.x + 25, crate.bounds.y + 25) < 25) {
-                crate.velocity.add(birdVelocity.cpy().scl(0.5f)); // Apply velocity to the crate
+                crate.velocity.add(birdVelocity.cpy().scl(0.5f));
             }
         }
     }
+
+    // Helper function to transform MagicPig to Pig after teleportation
+    private void transformToRegularPig(int index, MagicPig magicPig) {
+        Pig regularPig = new Pig(new Rectangle(magicPig.bounds.x, magicPig.bounds.y, magicPig.bounds.width, magicPig.bounds.height));
+        pigs.set(index, regularPig); // Replace the MagicPig in the list with the new regular pig
+    }
+
 
     private void checkWinCondition() {
         boolean allPigsHit = true;
@@ -339,6 +387,7 @@ public class Level2GameScreen implements Screen {
         redBirdTexture.dispose();
         yellowBirdTexture.dispose();
         pigTexture.dispose();
+        magicPigTexture.dispose();
         pigHurtTexture.dispose();
         crateTexture.dispose();
         pauseButtonTexture.dispose();
