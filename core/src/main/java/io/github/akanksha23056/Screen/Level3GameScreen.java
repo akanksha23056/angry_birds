@@ -78,12 +78,15 @@ public class Level3GameScreen implements Screen {
     private static class Glass {
         Rectangle bounds;
         Vector2 velocity;
+        float rotationAngle; // New: Simulates the rotation
 
         Glass(Rectangle bounds) {
             this.bounds = bounds;
             this.velocity = new Vector2(0, 0);
+            this.rotationAngle = 0; // Initially upright
         }
     }
+
 
     private final ArrayList<Pig> pigs = new ArrayList<>();
     private final ArrayList<Crate> crates = new ArrayList<>();
@@ -190,9 +193,19 @@ public class Level3GameScreen implements Screen {
         }
 
         // Draw glass slabs
+        // Draw glass slabs with rotation
         for (Glass glass : glassSlabs) {
-            batch.draw(glassTexture, glass.bounds.x, glass.bounds.y, glass.bounds.width, glass.bounds.height);
+            batch.draw(glassTexture,
+                glass.bounds.x, glass.bounds.y,
+                glass.bounds.width / 2, glass.bounds.height / 2, // Origin for rotation
+                glass.bounds.width, glass.bounds.height,
+                1, 1, // Scale
+                glass.rotationAngle, // Rotation angle
+                0, 0, // Texture origin
+                glassTexture.getWidth(), glassTexture.getHeight(),
+                false, false);
         }
+
 
         // Draw pause button
         drawPauseButton();
@@ -275,8 +288,9 @@ public class Level3GameScreen implements Screen {
 
     private void updateGlassSlabs() {
         for (Glass glass : glassSlabs) {
-            // Check if the glass is supported by any crate
             boolean isSupported = false;
+
+            // Check if the glass is supported by any crate
             for (Crate crate : crates) {
                 if (crate.bounds.overlaps(new Rectangle(glass.bounds.x, glass.bounds.y - 1, glass.bounds.width, 1))) {
                     isSupported = true;
@@ -288,6 +302,17 @@ public class Level3GameScreen implements Screen {
                 glass.velocity.add(gravity); // Apply gravity if unsupported
             }
 
+            // Simulate tipping rotation
+            if (glass.rotationAngle > 0) {
+                glass.rotationAngle += 1.0f; // Increment tipping angle
+                if (glass.rotationAngle > 90) { // Fully tipped
+                    glass.rotationAngle = 90;
+                }
+
+                // Apply horizontal displacement to simulate tipping
+                glass.bounds.x += 2.0f * Math.signum(glass.velocity.x);
+            }
+
             glass.bounds.x += glass.velocity.x;
             glass.bounds.y += glass.velocity.y;
 
@@ -297,6 +322,8 @@ public class Level3GameScreen implements Screen {
             }
         }
     }
+
+
 
 
     private void updatePigs() {
@@ -355,6 +382,7 @@ public class Level3GameScreen implements Screen {
         for (Glass glass : glassSlabs) {
             if (currentBirdPosition.dst(glass.bounds.x + 10, glass.bounds.y + 50) < 25) {
                 glass.velocity.add(birdVelocity.cpy().scl(0.5f));
+                glass.rotationAngle = 5; // Initiate tipping
             }
         }
     }
