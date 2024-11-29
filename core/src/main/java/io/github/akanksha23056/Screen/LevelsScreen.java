@@ -37,11 +37,11 @@ public class LevelsScreen implements Screen {
         this.batch = game.batch;
         this.levelsImage = new Texture("levels.jpg");
         this.level1Texture = new Texture("level1.png");
-        this.level1HoverTexture = new Texture("level1_hover.png");
+        this.level1HoverTexture = new Texture("level1.png");
         this.level2Texture = new Texture("level2.png");
-        this.level2HoverTexture = new Texture("level2_hover.png");
+        this.level2HoverTexture = new Texture("level2.png");
         this.level3Texture = new Texture("level3.png");
-        this.level3HoverTexture = new Texture("level3_hover.png");
+        this.level3HoverTexture = new Texture("level3.png");
         this.backButtonTexture = new Texture("back.png");
         this.backButtonHoverTexture = new Texture("back_hover.png");
         this.lockTexture = new Texture("lock.png");
