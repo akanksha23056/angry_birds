@@ -82,7 +82,7 @@ public class Level1GameScreen implements Screen {
         this.batch = game.batch;
 
         // Load textures
-        this.levelImage = new Texture("level2game.jpg");
+        this.levelImage = new Texture("level1game.jpg");
         this.slingshotTexture = new Texture("sling.png");
         this.birdTexture = new Texture("redbird.png");
         this.pigTexture = new Texture("pig.png");

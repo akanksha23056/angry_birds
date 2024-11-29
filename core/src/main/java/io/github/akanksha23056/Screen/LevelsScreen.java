@@ -7,7 +7,6 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.ScreenUtils;
 import io.github.akanksha23056.Main;
-import io.github.akanksha23056.Objects.Bird;
 
 public class LevelsScreen implements Screen {
     private final Main game;
@@ -21,7 +20,6 @@ public class LevelsScreen implements Screen {
     private final Texture level3HoverTexture;
     private final Texture backButtonTexture;
     private final Texture backButtonHoverTexture;
-
 
     private final Rectangle level1Bounds;
     private final Rectangle level2Bounds;
@@ -65,7 +63,6 @@ public class LevelsScreen implements Screen {
         batch.draw(levelsImage, 0.0F, 0.0F, (float) Gdx.graphics.getWidth(), (float) Gdx.graphics.getHeight());
 
         // Handle level buttons
-//        handleButton(level1Texture, level1HoverTexture, level1Bounds, "levelgame.jpg");
         if (level1Bounds.contains((float) Gdx.input.getX(), (float) (Gdx.graphics.getHeight() - Gdx.input.getY()))) {
             batch.draw(level1HoverTexture, level1Bounds.x - 5.0F, level1Bounds.y - 5.0F, level1Bounds.width + 10.0F, level1Bounds.height + 10.0F);
             if (Gdx.input.isButtonJustPressed(0)) {
@@ -75,8 +72,6 @@ public class LevelsScreen implements Screen {
             batch.draw(level1Texture, level1Bounds.x, level1Bounds.y, level1Bounds.width, level1Bounds.height);
         }
 
-//        handleButton(level2Texture, level2HoverTexture, level2Bounds, "levelgame.jpg");
-        //handles level 2 button
         if (level2Bounds.contains((float) Gdx.input.getX(), (float) (Gdx.graphics.getHeight() - Gdx.input.getY()))) {
             batch.draw(level2HoverTexture, level2Bounds.x - 5.0F, level2Bounds.y - 5.0F, level2Bounds.width + 10.0F, level2Bounds.height + 10.0F);
             if (Gdx.input.isButtonJustPressed(0)) {
@@ -85,8 +80,6 @@ public class LevelsScreen implements Screen {
         } else {
             batch.draw(level2Texture, level2Bounds.x, level2Bounds.y, level2Bounds.width, level2Bounds.height);
         }
-
-//        handleButton(level3Texture, level3HoverTexture, level3Bounds, "levelgame.jpg");
 
         if (level3Bounds.contains((float) Gdx.input.getX(), (float) (Gdx.graphics.getHeight() - Gdx.input.getY()))) {
             batch.draw(level3HoverTexture, level3Bounds.x - 5.0F, level3Bounds.y - 5.0F, level3Bounds.width + 10.0F, level3Bounds.height + 10.0F);
@@ -100,26 +93,17 @@ public class LevelsScreen implements Screen {
         // Handle back button
         handleBackButton();
 
-
         batch.end();
-    }
-
-    private void handleButton(Texture normalTexture, Texture hoverTexture, Rectangle bounds, String levelGameImagePath) {
-        if (bounds.contains((float) Gdx.input.getX(), (float) (Gdx.graphics.getHeight() - Gdx.input.getY()))) {
-            batch.draw(hoverTexture, bounds.x - 5.0F, bounds.y - 5.0F, bounds.width + 10.0F, bounds.height + 10.0F);
-            if (Gdx.input.isButtonJustPressed(0)) {
-                Gdx.app.postRunnable(() -> game.setScreen(new Level1GameScreen(game, levelGameImagePath)));
-            }
-        } else {
-            batch.draw(normalTexture, bounds.x, bounds.y, bounds.width, bounds.height);
-        }
     }
 
     private void handleBackButton() {
         if (backButtonBounds.contains((float) Gdx.input.getX(), (float) (Gdx.graphics.getHeight() - Gdx.input.getY()))) {
             batch.draw(backButtonHoverTexture, backButtonBounds.x - 5.0F, backButtonBounds.y - 5.0F, backButtonBounds.width + 30.0F, backButtonBounds.height + 30.0F);
             if (Gdx.input.isButtonJustPressed(0)) {
-                Gdx.app.postRunnable(() -> game.setScreen(new HomeScreen(game)));
+                Gdx.app.postRunnable(() -> {
+                    // Exit the game
+                    Gdx.app.exit();
+                });
             }
         } else {
             batch.draw(backButtonTexture, backButtonBounds.x, backButtonBounds.y, backButtonBounds.width, backButtonBounds.height);
